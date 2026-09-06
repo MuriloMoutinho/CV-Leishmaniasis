@@ -1,172 +1,232 @@
-import torch, time, os, numpy, PIL.Image
-from torchvision import datasets, models, transforms
+import torch, time, os, numpy
+from torchvision import datasets
 from torch.utils.data import DataLoader
 from matplotlib import pyplot as plt
 import torch.nn as nn
 import torch.optim as optmin
+from models import create_binary_model
+from augmentation import get_images_transformations
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score
+)
 
-dataset_path = r'test/'
-folder_train = os.path.join(dataset_path, 'train')
-folder_val = os.path.join(dataset_path, 'val')
-folder_test = os.path.join(dataset_path, 'test')
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
-
-def get_images_transformations():
-    return {
-        'train': transforms.Compose([
-            transforms.Resize(size=(image_size, image_size)),
-            transforms.ToTensor(),
-        ]),
-        'val': transforms.Compose([
-            transforms.Resize(size=(image_size, image_size)),
-            transforms.ToTensor(),
-        ]),
-        'test': transforms.Compose([
-            transforms.Resize(size=(image_size, image_size)),
-            transforms.ToTensor(),
-        ])
-    }
 
 def get_transformed_dataset(image_transforms):
+    dataset_path = r'../datasets/test/'
+    folder_train = os.path.join(dataset_path, 'train')
+    folder_val = os.path.join(dataset_path, 'val')
+
     return {
         'train': datasets.ImageFolder(root=folder_train, transform=image_transforms['train']),
         'val': datasets.ImageFolder(root=folder_val, transform=image_transforms['val']),
-        #'test': datasets.ImageFolder(root=folder_test, transform=image_transforms['test']),
     }
 
-def create_cnn_model():
-    cnn_model = models.alexnet(pretrained=True)
-
-    for param in cnn_model.parameters():
-        param.requires_grad = False
-    # trava o treinamento da rede
-
-    classes_number = len(os.listdir(folder_train))  # determinado pela quantidade de pastas (2 neste caso, positivo e negativo)
-    #classes_hash = {v: k for k, v in images['train'].class_to_idx.items()}
-
-    cnn_model.classifier[6] = nn.Linear(4096, classes_number)  # numero de neuronios. Essa linha substitui a ultima camada 6
-    #numero de classes define que a rede neural irá acabar em 2 nós (pois tem 2 classes)
-
-    cnn_model.classifier.add_module("7", nn.LogSoftmax(dim=1))  # adiciona um bloco camada de softmax. Essa linha adiciona uma nova camada 7
-    # ao adicionar 2 novas camadas e treinar, apenas essas novas camadas não travadas vão ser afetadas pelo treinamento
-
-    cnn_model.to(device)
-    return cnn_model
-
-#dividir função train e validate, receber lista de imagens por parametro
-def train_and_validate(model, error_function, optimizer, learning_rate=0.001, batch_size=32, epoch_num=25):
-    train_data_loader = DataLoader(images['train'], batch_size=batch_size, shuffle=True)
-    train_data_val = DataLoader(images['val'], batch_size=batch_size, shuffle=True)
-
-    num_train_images = len(images['train'])
-    num_val_images = len(images['train'])
+def train_and_validate(
+    model,
+    train_loader,
+    val_loader,
+    loss_function,
+    optimizer,
+    epoch_num=20,
+    metric_to_monitor="f1"
+):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
 
     history = []
-    best_accuracy = 0
+    best_metric = -float("inf")
 
     for epoch in range(epoch_num):
+
         start = time.time()
-        print(f"Época: {epoch + 1}/{epoch_num}")
+        print(f"\nÉpoca {epoch + 1}/{epoch_num}")
 
-        # vai definir como modo de treino, assim afetando as camadas da rede que não estão paralizadas
-        model.train()
+        train_metrics = train_one_epoch(model, train_loader, loss_function, optimizer, device)
+        val_metrics = validate(model, val_loader, loss_function, device)
 
-        error_train = 0.0
-        accuracy_train = 0.0
-
-        error_val = 0.0
-        accuracy_val = 0.0
-
-        #itera para cada lote de imagem, os batchs sao os tensores do lote
-        #labels sao as classificacoes de cada imagem do lote
-        for i_batch, (image_batch, label_class) in enumerate(train_data_loader):
-
-            #define cpu ou gpu
-            image_batch = image_batch.to(device)
-            label_class = label_class.to(device)
-
-            #zera gradiente, ia faz predicao, calcula loss, faz backward, atualiza pessos ia
-            optimizer.zero_grad()
-            results = model(image_batch)
-            error = error_function(results, label_class)
-            error.backward()
-            optimizer.step()
-
-            error_train += error.item() * image_batch.size(0) #erro total do lote, e soma o erro no treino
-
-            max_results, indices = torch.max(results, 1)
-            corrects_results = indices.eq(label_class.data.view_as(indices))
-
-            accuracy = torch.mean(corrects_results.type(torch.FloatTensor))
-            accuracy_train += accuracy.item() * image_batch.size(0)
-
-            print(f" Treino - lote {i_batch}, erro {error.item()}, acuracia: {accuracy.item()}")
-
-        with torch.no_grad():
-
-            model.eval() #modo de treino
-
-            for i_batch, (image_batch, label_class) in enumerate(train_data_val):
-                image_batch = image_batch.to(device)
-                label_class = label_class.to(device)
-
-                results = model(image_batch)  # calcula a saida da imagem usando o modelo
-
-                error = error_function(results, label_class)  # verifica o resultado com a label correta
-                error_val += error.item() * image_batch.size(0)  # erro total do lote, e soma o erro no treino
-
-                max_results, indices = torch.max(results, 1)
-                corrects_results = indices.eq(label_class.data.view_as(indices))
-
-                accuracy = torch.mean(corrects_results.type(torch.FloatTensor))
-                accuracy_val += accuracy.item() * image_batch.size(0)
-
-                print(f" Validação - lote {i_batch}, erro {error.item()}, acuracia: {accuracy.item()}")
-
-        average_error_train = error_train / num_train_images
-        average_accuracy_train = accuracy_train / num_train_images
-
-        average_error_val = error_val / num_val_images
-        average_accuracy_val = accuracy_val / num_val_images
-
-        history.append([average_error_train, average_accuracy_train, average_error_val, average_accuracy_val])
-
-        end = time.time()
+        history.append({
+            "epoch": epoch + 1,
+            "train_loss": train_metrics['loss'],
+            "train_accuracy": train_metrics['accuracy'],
+            "val_loss": val_metrics['loss'],
+            "val_accuracy": val_metrics['accuracy'],
+            "val_precision": val_metrics['precision'],
+            "val_recall": val_metrics['recall'],
+            "val_f1": val_metrics['f1'],
+            "val_auc": val_metrics['auc']
+        })
 
         print(
-            f"Época : {epoch + 1}, Tempo: {end - start}s"
-            f"\n\t\tTreino: Erro: {average_error_train}, Acurácia: {average_accuracy_train*100}%, "
-            f"\n\t\tValidação : Erro : {average_error_val}, Acurácia: {average_accuracy_val*100}%, "
+            f"Train Loss: {train_metrics['loss']:.4f} | "
+            f"Train Acc: {train_metrics['accuracy']:.4f}"
         )
 
-        if average_accuracy_val > best_accuracy:
-            best_accuracy = average_accuracy_val
-            #torch.save(model.state_dict(), "models/melhor_modelo.pth")
+        print(
+            f"Val Loss: {val_metrics['loss']:.4f} | "
+            f"Val Acc: {val_metrics['accuracy']:.4f} | "
+            f"Precision: {val_metrics['precision']:.4f} | "
+            f"Recall: {val_metrics['recall']:.4f} | "
+            f"F1: {val_metrics['f1']:.4f} | "
+            f"AUC: {val_metrics['auc']:.4f}"
+        )
+
+        current_metric = val_metrics[metric_to_monitor]
+
+        # stop early
+        if current_metric > best_metric:
+            best_metric = current_metric
             torch.save(model, 'models/melhor_modelo.pt')
+
+        end = time.time()
+        print(f"Tempo: {end - start:.2f}s")
 
     return history
 
 
-image_size = 224
-images = get_transformed_dataset(get_images_transformations())
+def train_one_epoch(model, data_loader, loss_function, optimizer, device):
+    model.train()
+
+    total_loss = 0.0
+
+    all_labels = []
+    all_predictions = []
+
+    for images_batch, labels in data_loader:
+
+        images_batch = images_batch.to(device)
+        labels = labels.to(device)
+        labels = labels.float().unsqueeze(1)
+
+        optimizer.zero_grad()
+        outputs = model(images_batch)
+        loss = loss_function(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item() * images_batch.size(0)
+
+        probabilities = torch.sigmoid(outputs)
+        predictions = (probabilities >= 0.5).float()
+
+        all_labels.extend(labels.detach().cpu().numpy().ravel())
+        all_predictions.extend(predictions.detach().cpu().numpy().ravel())
+
+    all_labels = numpy.array(all_labels)
+    all_predictions = numpy.array(all_predictions)
+
+    average_loss = total_loss / len(data_loader.dataset)
+    accuracy = accuracy_score(all_labels, all_predictions)
+
+    return {
+        "loss": average_loss,
+        "accuracy": accuracy
+    }
+
+def validate(model, data_loader, loss_function, device):
+    model.eval()
+
+    total_loss = 0.0
+    all_labels = []
+    all_probabilities = []
+    all_predictions = []
+
+    with torch.no_grad():
+        for images_batch, labels in data_loader:
+
+            images_batch = images_batch.to(device)
+            labels = labels.to(device)
+            labels = labels.float().unsqueeze(1)
+
+            outputs = model(images_batch)
+            loss = loss_function(outputs, labels)
+
+            total_loss += loss.item() * images_batch.size(0)
+
+            probabilities = torch.sigmoid(outputs) # Probabilidade da classe 1
+            predictions = (probabilities >= 0.5).float() # Classe prevista
+
+            all_labels.extend(labels.cpu().numpy().ravel())
+            all_probabilities.extend(probabilities.cpu().numpy().ravel())
+            all_predictions.extend(predictions.cpu().numpy().ravel())
+
+    all_labels = numpy.array(all_labels)
+    all_probabilities = numpy.array(all_probabilities)
+    all_predictions = numpy.array(all_predictions)
+
+    average_loss = total_loss / len(data_loader.dataset)
+    accuracy = accuracy_score(all_labels, all_predictions)
+    precision = precision_score(all_labels, all_predictions, zero_division=0)
+    recall = recall_score(all_labels, all_predictions, zero_division=0)
+    f1 = f1_score(all_labels, all_predictions, zero_division=0)
+    auc = roc_auc_score(all_labels, all_probabilities)
+
+    metrics = {
+        "loss": average_loss,
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "auc": auc
+    }
+
+    return metrics
+
 
 #estimativa do gradiente mais "ruidosa" para batchs menores. Batchs maiores tras uma média melhor, mas pode piorar generalização
-batch_size = 10 #vai pegar 10 imagens por vez do dataset e enviá-las para a rede.
-epoch_num = 20
-learning_rate = 0.001 #verificar linear scaling rule
+batch_size = 16 #vai pegar x imagens por vez do dataset e enviá-las para a rede.
+epoch_num = 40
+learning_rate = 0.001 #verificar linear scaling rule (valor padrão)
 
-alexnet = create_cnn_model()
-error_function = nn.BCEWithLogitsLoss()
-optimizer = optmin.AdamW(alexnet.parameters())
+model_train = create_binary_model()
+error_function = nn.BCEWithLogitsLoss() #Binary Cross-Entropy
+optimizer = optmin.AdamW(model_train.parameters(), lr=learning_rate)
 
-model_history = train_and_validate(alexnet, error_function, optimizer, learning_rate, batch_size, epoch_num)
+images = get_transformed_dataset(get_images_transformations())
+train_loader = DataLoader(images["train"], batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(images["val"], batch_size=batch_size, shuffle=False)
 
-np_model_history = numpy.array(model_history)
-plt.plot(np_model_history[:, 0:2])
-plt.legend(['Erro treino', 'Erro validação'])
-plt.xlabel("Época")
-plt.ylabel("Erro")
-plt.ylim(0,0.5)
-plt.show()
+model_history = train_and_validate(model_train, train_loader, val_loader, error_function, optimizer, epoch_num)
+
+
+def create_loss_history_graph(history):
+    epochs = range(1, len(history) + 1)
+
+    train_loss = [h["train_loss"] for h in history]
+    val_loss = [h["val_loss"] for h in history]
+
+    plt.plot(epochs, train_loss, label="Loss treino")
+    plt.plot(epochs, val_loss, label="Loss validação")
+
+    plt.xlabel("Época")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()
+
+
+def create_metrics_history_graph(history):
+    epochs = range(1, len(history) + 1)
+
+    val_accuracy = [h["val_accuracy"] for h in history]
+    val_precision = [h["val_precision"] for h in history]
+    val_recall = [h["val_recall"] for h in history]
+    val_f1 = [h["val_f1"] for h in history]
+    val_auc = [h["val_auc"] for h in history]
+
+    plt.plot(epochs, val_accuracy, label="Accuracy")
+    plt.plot(epochs, val_precision, label="Precision")
+    plt.plot(epochs, val_recall, label="Recall")
+    plt.plot(epochs, val_f1, label="F1")
+    plt.plot(epochs, val_auc, label="AUC")
+
+    plt.xlabel("Época")
+    plt.ylabel("Métrica")
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.show()
+
+create_loss_history_graph(model_history)
+create_metrics_history_graph(model_history)
