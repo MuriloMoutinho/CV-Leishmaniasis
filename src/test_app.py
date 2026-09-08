@@ -1,5 +1,3 @@
-import time
-
 import streamlit as st
 import torch
 from pathlib import Path
@@ -8,7 +6,7 @@ from augmentation import get_images_transformations
 
 image_transformations = get_images_transformations()['val']
 
-MODEL_PATH = Path(__file__).resolve().parent / "models" / "resnet_aug.pt"
+MODEL_PATH = Path(__file__).resolve().parent / "results" / "resnet_aug.pt"
 modelo = torch.load(MODEL_PATH, weights_only=False)
 
 def test_model(model, test_image):

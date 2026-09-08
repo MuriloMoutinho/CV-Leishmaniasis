@@ -2,22 +2,13 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
-
 SET_DATASET = "AIR_LEISH/Set1"
 IMAGE_DIR = Path("../datasets/" + SET_DATASET + "/Images")
-OUTPUT_DIR = Path("visualizacoes/" + SET_DATASET + "/rgb/")
 
+OUTPUT_DIR = Path("visualizacoes/" + SET_DATASET + "/rgb/")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 EXTENSIONS = { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp" }
-
-# ============================================================
-# CONVERTER RGB
-# ============================================================
-
 total_images = 0
 converted_images = 0
 errors = 0
@@ -53,11 +44,6 @@ for image_path in IMAGE_DIR.iterdir():
         errors += 1
         print(f"Erro ao ler: {image_path.name}")
         print(f"  {e}")
-
-
-# ============================================================
-# RESULTADO
-# ============================================================
 
 print("RESULTADO")
 print("=" * 50)

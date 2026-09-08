@@ -2,18 +2,10 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
-
 SET_DATASET = "AIR_LEISH/Set2/Images"
 IMAGE_DIR = Path("../datasets/" + SET_DATASET)
 
 EXTENSIONS = { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp" }
-
-# ============================================================
-# VERIFICAR RESOLUÇÕES
-# ============================================================
 
 resolutions = set()
 channels = set()
@@ -52,11 +44,11 @@ for image_path in IMAGE_DIR.iterdir():
                 alpha_min = alpha.min()
                 alpha_max = alpha.max()
 
-                # Existe pelo menos algum pixel transparente?
+                # Existe pelo menos algum pixel transparente
                 if alpha_min < 255:
                     transparent_images += 1
 
-                # O alpha realmente varia?
+                # O alpha realmente varia
                 if alpha_min != alpha_max:
                     useful_alpha_images += 1
 
@@ -65,10 +57,6 @@ for image_path in IMAGE_DIR.iterdir():
         print(f"Erro ao ler: {image_path.name}")
         print(f"  {e}")
 
-
-# ============================================================
-# RESULTADO
-# ============================================================
 
 print("\n" + "=" * 50)
 print("RESULTADO")
