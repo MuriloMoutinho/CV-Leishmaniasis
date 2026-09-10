@@ -1,48 +1,7 @@
-import numpy
 import torch
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, roc_auc_score)
 
-def train_one_epoch(model, data_loader, loss_function, optimizer, device):
-    model.train()
-    model.to(device)
-
-    total_loss = 0.0
-
-    all_labels = []
-    all_predictions = []
-
-    for images_batch, labels in data_loader:
-
-        images_batch = images_batch.to(device)
-        labels = labels.to(device)
-        labels = labels.float().unsqueeze(1)
-
-        optimizer.zero_grad()
-        outputs = model(images_batch)
-        loss = loss_function(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        total_loss += loss.item() * images_batch.size(0)
-
-        probabilities = torch.sigmoid(outputs)
-        predictions = (probabilities >= 0.5).float()
-
-        all_labels.extend(labels.detach().cpu().numpy().ravel())
-        all_predictions.extend(predictions.detach().cpu().numpy().ravel())
-
-    all_labels = numpy.array(all_labels)
-    all_predictions = numpy.array(all_predictions)
-
-    average_loss = total_loss / len(data_loader.dataset)
-    accuracy = accuracy_score(all_labels, all_predictions)
-
-    return {
-        "loss": average_loss,
-        "accuracy": accuracy
-    }
-
-def validate(model, data_loader, loss_function, device):
+def validate_model(model, data_loader, loss_function, device):
     model.eval()
     model.to(device)
 
