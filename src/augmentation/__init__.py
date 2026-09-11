@@ -1,1 +1,1 @@
-from .resnet_transformations import get_resnet_transformations as get_images_transformations
+from .images_transformations import get_images_transformations

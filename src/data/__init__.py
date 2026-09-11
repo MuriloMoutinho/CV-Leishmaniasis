@@ -1,2 +1,1 @@
-from .spreadsheet import save_experiment_result
-from .graphics import create_loss_history_graph
+from .spreadsheet import save_experiment_result, save_training_result

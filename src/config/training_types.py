@@ -10,6 +10,7 @@ class TrainingConfig:
     weight_decay: float
     batch_size: int
     epochs: int
+    scheduler_name: str | None = None
 
 @dataclass
 class KFoldConfig:

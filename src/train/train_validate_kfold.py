@@ -2,11 +2,12 @@ import torch, time, numpy, copy
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Subset
 
-from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function
+from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function, \
+    create_scheduler
 from train import train_one_epoch, validate_model
 
 
-def run_stratified_kfold(
+def train_validate_kfold(
     dataset,
     transformations,
     config: TrainingConfig,
@@ -40,6 +41,7 @@ def run_stratified_kfold(
         fold_model = create_binary_model(config.model_name)
         optimizer = create_optimizer(config.optimizer_name, fold_model, config.learning_rate, config.weight_decay)
         loss_function = create_loss_function(config.loss_name)
+        scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
 
         history, best_metrics_epoch = train_and_validate_fold(
             model=fold_model,
@@ -47,10 +49,14 @@ def run_stratified_kfold(
             val_loader=val_loader,
             loss_function=loss_function,
             optimizer=optimizer,
+            scheduler=scheduler,
             epoch_num=config.epochs,
             patience_early_stopping=kfold_config.patience_early_stopping,
             metric_to_monitor=kfold_config.metric_to_monitor
         )
+
+        end = time.time()
+        best_metrics_epoch['time'] = end - start
 
         fold_results.append(best_metrics_epoch)
         fold_histories.append(history)
@@ -61,9 +67,7 @@ def run_stratified_kfold(
         print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
         print(f"F1       : {best_metrics_epoch['f1']:.4f}")
         print(f"AUC      : {best_metrics_epoch['auc']:.4f}")
-
-        end = time.time()
-        print(f"Tempo fold: {end - start:.2f}s")
+        print(f"Tempo fold: {best_metrics_epoch['time']:.2f}s")
 
     return fold_results, fold_histories
 
@@ -73,6 +77,7 @@ def train_and_validate_fold(
     val_loader,
     loss_function,
     optimizer,
+    scheduler,
     epoch_num,
     patience_early_stopping,
     metric_to_monitor
@@ -95,6 +100,9 @@ def train_and_validate_fold(
         train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device)
         val_metrics = validate_model(model, val_loader, loss_function, device)
 
+        if scheduler is not None:
+            scheduler.step()
+
         history.append({
             "epoch": epoch + 1,
             "train_loss": train_metrics['loss'],
@@ -108,10 +116,8 @@ def train_and_validate_fold(
         })
 
         print(
-            f"Train Loss: {train_metrics['loss']:.4f} | "
-            f"Train Acc: {train_metrics['accuracy']:.4f} | "
-            f"Val Loss: {val_metrics['loss']:.4f} | "
-            f"Val Acc: {val_metrics['accuracy']:.4f}"
+            f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f} | "
+            f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f}"
         )
 
         current_monitored_metric = val_metrics[metric_to_monitor]
