@@ -30,6 +30,6 @@ for config in configs:
         config,
         'experiments/melhor_modelo.pt')
 
-    save_training_result(history, config, 'experiments/treino.csv')
+    save_training_result(history, config, 'experiments/training.csv')
 
 

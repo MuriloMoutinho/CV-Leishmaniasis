@@ -2,3 +2,4 @@ from .validade_model import validate_model
 from .train_one_epoch import train_one_epoch
 from .train_validate_kfold import train_validate_kfold
 from .train_validate_model import train_validate_model
+from .train_validate_holdout import train_validate_holdout

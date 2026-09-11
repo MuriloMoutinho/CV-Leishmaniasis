@@ -1,78 +1,67 @@
-import torch, time, numpy, copy
-from sklearn.model_selection import StratifiedKFold
-from torch.utils.data import DataLoader, Subset
+import torch, time, copy
+from torch.utils.data import DataLoader, Subset, random_split
 
-from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler
+from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, \
+    create_scheduler, HoldoutConfig
 from train import train_one_epoch, validate_model
 
 
-def train_validate_kfold(
+def train_validate_holdout(
     dataset,
     transformations,
     config: TrainingConfig,
-    kfold_config: KFoldConfig
+    holdout_config: HoldoutConfig
 ):
+    train_loader, val_loader = create_data_loaders(dataset, transformations, config, holdout_config)
 
-    labels = numpy.array(dataset.targets)
-    labels_arr = numpy.zeros(len(labels))
-    skf = StratifiedKFold(n_splits=kfold_config.n_splits ,shuffle=True, random_state=42)
+    model = create_binary_model(config.model_name)
+    optimizer = create_optimizer(config.optimizer_name, model, config.learning_rate, config.weight_decay)
+    loss_function = create_loss_function(config.loss_name)
+    scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
 
-    fold_results = []
-    fold_histories = []
+    history, best_metrics_epoch = train_and_validate(
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        loss_function=loss_function,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        epoch_num=config.epochs,
+        patience_early_stopping=holdout_config.patience_early_stopping,
+        metric_to_monitor=holdout_config.metric_to_monitor
+    )
 
-    for fold, (train_idx, val_idx) in enumerate(skf.split(labels_arr, labels), start=1):
+    print(f"\nResultados melhor época:")
+    print(f"Accuracy : {best_metrics_epoch['accuracy']:.4f}")
+    print(f"Precision: {best_metrics_epoch['precision']:.4f}")
+    print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
+    print(f"F1       : {best_metrics_epoch['f1']:.4f}")
+    print(f"AUC      : {best_metrics_epoch['auc']:.4f}")
+    print(f"Tempo total: {best_metrics_epoch['time']:.2f}s")
 
-        print("\n" + "=" * 60)
-        print(f"FOLD {fold}/{kfold_config.n_splits}")
-        print("=" * 60)
+    return best_metrics_epoch, history
 
-        train_loader, val_loader = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
+def create_data_loaders(dataset, transformations, config, holdout_config):
+    generator = torch.Generator().manual_seed(holdout_config.val_split_seed)
+    indices = torch.randperm(len(dataset), generator=generator).tolist()
 
-        fold_model = create_binary_model(config.model_name)
-        optimizer = create_optimizer(config.optimizer_name, fold_model, config.learning_rate, config.weight_decay)
-        loss_function = create_loss_function(config.loss_name)
-        scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
+    val_size = int(len(dataset) * (holdout_config.val_ratio/100))
+    val_indices = indices[:val_size]
+    train_indices = indices[val_size:]
 
-        history, best_metrics_epoch = train_and_validate_fold(
-            model=fold_model,
-            train_loader=train_loader,
-            val_loader=val_loader,
-            loss_function=loss_function,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            epoch_num=config.epochs,
-            patience_early_stopping=kfold_config.patience_early_stopping,
-            metric_to_monitor=kfold_config.metric_to_monitor
-        )
-
-        fold_results.append(best_metrics_epoch)
-        fold_histories.append(history)
-
-        print(f"\nResultados Fold {fold}:")
-        print(f"Accuracy : {best_metrics_epoch['accuracy']:.4f}")
-        print(f"Precision: {best_metrics_epoch['precision']:.4f}")
-        print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
-        print(f"F1       : {best_metrics_epoch['f1']:.4f}")
-        print(f"AUC      : {best_metrics_epoch['auc']:.4f}")
-        print(f"Tempo fold: {best_metrics_epoch['time']:.2f}s")
-
-    return fold_results, fold_histories
-
-def create_data_loaders(dataset, transformations, config, train_idx, val_idx):
     train_dataset = copy.copy(dataset)
     train_dataset.transform = transformations["train"]
-    train_fold = Subset(train_dataset, train_idx)
+    train_fold = Subset(train_dataset, train_indices)
     train_loader = DataLoader(train_fold, batch_size=config.batch_size, shuffle=True)
 
     val_dataset = copy.copy(dataset)
     val_dataset.transform = transformations["val"]
-    val_fold = Subset(val_dataset, val_idx)
+    val_fold = Subset(val_dataset, val_indices)
     val_loader = DataLoader(val_fold, batch_size=config.batch_size, shuffle=False)
 
     return train_loader, val_loader
 
-def train_and_validate_fold(
+def train_and_validate(
     model,
     train_loader,
     val_loader,
@@ -92,6 +81,7 @@ def train_and_validate_fold(
     best_metrics_epoch  = None
 
     epochs_without_improvement = 0
+
     start = time.time()
 
     for epoch in range(epoch_num):
@@ -120,6 +110,8 @@ def train_and_validate_fold(
         print(
             f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f} | "
             f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f}"
+            f"Val Pre: {val_metrics['precision']:.4f} | Val Rec: {val_metrics['recall']:.4f}"
+            f"Val F1: {val_metrics['f1']:.4f} | Val Auc: {val_metrics['auc']:.4f}"
         )
 
         current_monitored_metric = val_metrics[metric_to_monitor]
