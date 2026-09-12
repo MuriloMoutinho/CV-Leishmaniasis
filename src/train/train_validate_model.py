@@ -2,7 +2,7 @@ import torch, time
 from torch.utils.data import DataLoader
 
 from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, create_scheduler, \
-    create_augmentation
+    create_augmentation, get_optimizer_param_groups
 from train import train_one_epoch, validate_model
 
 def train_validate_model(
@@ -21,7 +21,8 @@ def train_validate_model(
     test_loader = DataLoader(teste_dataset, batch_size=config.batch_size, shuffle=False)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-    optimizer = create_optimizer(config.optimizer_name, model, config.learning_rate, config.weight_decay)
+    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.fine_tuning)
+    optimizer = create_optimizer(config.optimizer_name, param_groups, config.weight_decay)
     loss_function = create_loss_function(config.loss_name)
     scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
 
@@ -32,11 +33,8 @@ def train_validate_model(
         start_epoch = time.time()
         print(f"\nÉpoca {epoch + 1}/{config.epochs}")
 
-        train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device)
+        train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device, scheduler)
         print(f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f}")
-
-        if scheduler is not None:
-            scheduler.step()
 
         end_epoch = time.time()
         print(f"Tempo época: {end_epoch - start_epoch:.2f}s")

@@ -8,12 +8,12 @@ def create_binary_efficientnet(dropout, fine_tuning=None):
     for param in model.parameters():
         param.requires_grad = False
 
-    if fine_tuning == "last_block":
+    if fine_tuning in ["last_block", "last_two_blocks"]:
         for param in model.features[-1].parameters():
             param.requires_grad = True
 
-    elif fine_tuning == "last_two_blocks":
-        for param in model.features[-2:].parameters():
+    if fine_tuning == "last_two_blocks":
+        for param in model.features[-2].parameters():
             param.requires_grad = True
 
     model.classifier[1] = nn.Sequential(

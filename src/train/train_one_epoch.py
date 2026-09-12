@@ -1,7 +1,7 @@
 import torch
 from sklearn.metrics import accuracy_score
 
-def train_one_epoch(data_loader, model, loss_function, optimizer, device):
+def train_one_epoch(data_loader, model, loss_function, optimizer, device, scheduler=None):
     model.train()
     model.to(device)
 
@@ -20,6 +20,8 @@ def train_one_epoch(data_loader, model, loss_function, optimizer, device):
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         total_loss += loss.item() * images_batch.size(0)
 

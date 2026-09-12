@@ -3,7 +3,7 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Subset
 
 from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler, create_augmentation
+    create_scheduler, create_augmentation, get_optimizer_param_groups
 from train import train_one_epoch, validate_model
 
 
@@ -31,7 +31,8 @@ def train_validate_kfold(
         train_loader, val_loader = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
 
         fold_model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-        optimizer = create_optimizer(config.optimizer_name, fold_model, config.learning_rate, config.weight_decay)
+        param_groups = get_optimizer_param_groups(fold_model, config.learning_rate, config.fine_tuning)
+        optimizer = create_optimizer(config.optimizer_name, param_groups, config.weight_decay)
         loss_function = create_loss_function(config.loss_name)
         scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
 
@@ -100,11 +101,8 @@ def train_and_validate_fold(
         start_epoch = time.time()
         print(f"\nÉpoca {epoch + 1}/{epoch_num}")
 
-        train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device)
+        train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device, scheduler)
         val_metrics = validate_model(model, val_loader, loss_function, device)
-
-        if scheduler is not None:
-            scheduler.step()
 
         history.append({
             "epoch": epoch + 1,

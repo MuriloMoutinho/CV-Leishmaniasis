@@ -1,13 +1,52 @@
 import torch
+from torchvision import models
 
 from augmentation import weak_augmentation, medium_augmentation, strong_augmentation
 from models import create_binary_resnet, create_binary_densenet, create_binary_efficientnet
 
-def create_optimizer(optimizer_name, model, learning_rate, weight_decay):
+def create_optimizer(optimizer_name, param_group, weight_decay):
     if optimizer_name == "adamw":
-        return torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        return torch.optim.AdamW(param_group, weight_decay=weight_decay)
     elif optimizer_name == "adam":
-        return torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        return torch.optim.Adam(param_group, weight_decay=weight_decay)
+
+    return None
+
+def get_optimizer_param_groups(model, learning_rate, fine_tuning=None):
+    layers = get_model_layers(model)
+    param_groups = []
+
+    if fine_tuning == "last_two_blocks":
+        param_groups.append({ "params": layers["second_last_block"], "lr": learning_rate * 0.1 })
+
+    if fine_tuning in ["last_block","last_two_blocks"]:
+        param_groups.append({ "params": layers["last_block"], "lr": learning_rate * 0.3 })
+
+    param_groups.append({ "params": layers["classifier"], "lr": learning_rate })
+
+    return param_groups
+
+def get_model_layers(model):
+    if isinstance(model, models.ResNet):
+        return {
+            "classifier": list(model.fc.parameters()),
+            "last_block": list(model.layer4.parameters()),
+            "second_last_block": list(model.layer3.parameters()),
+        }
+
+    elif isinstance(model, models.EfficientNet):
+        return {
+            "classifier": list(model.classifier.parameters()),
+            "last_block": list(model.features[-1].parameters()),
+            "second_last_block": list(model.features[-2].parameters()),
+        }
+
+    elif isinstance(model, models.DenseNet):
+        return {
+            "classifier": list(model.classifier.parameters()),
+            "last_block": list(model.features.denseblock4.parameters()),
+            "second_last_block": list(model.features.denseblock3.parameters()),
+        }
 
     return None
 
@@ -28,8 +67,24 @@ def create_binary_model(model_name, dropout=0, fine_tuning=None):
     return None
 
 def create_scheduler(scheduler_name, optimizer):
-    if scheduler_name == "cosine":
-        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=1e-6)
+    if scheduler_name == "warmup+cosine":
+        warmup_steps = 1000
+        total_steps = 10000
+
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer,
+            start_factor=0.01,
+            end_factor=1.0,
+            total_iters=warmup_steps
+        )
+        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_steps - warmup_steps)
+
+        return torch.optim.lr_scheduler.SequentialLR(
+            optimizer,
+            schedulers=[warmup_scheduler, cosine_scheduler],
+            milestones=[warmup_steps]
+        )
+
 
     return None
 
