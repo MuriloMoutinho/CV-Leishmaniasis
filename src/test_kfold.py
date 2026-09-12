@@ -1,6 +1,5 @@
 import torchvision
 
-from augmentation import get_images_transformations
 from config import KFoldConfig, TrainingConfig
 from data import save_kfold_result
 from train import train_validate_kfold
@@ -17,49 +16,61 @@ kfold_config = KFoldConfig(
 )
 
 configs = [
-    # ==========================================
-    # 2. LEARNING RATE
-    # ==========================================
     TrainingConfig(
-        "resnet50", 0.0, "cross_entropy",
-        "adamw", 0.004, 0.01, 16, 50
+        model_name="resnet50",
+        fine_tuning="last_block",
+        dropout=0,
+        loss_name="cross_entropy",
+        optimizer_name="adamw",
+        learning_rate=0.005,
+        weight_decay=0.01,
+        batch_size=16,
+        epochs=50,
+        augmentation_level="weak",
     ),
     TrainingConfig(
-        "resnet50", 0.0, "cross_entropy",
-        "adamw", 0.006, 0.01, 16, 50
-    ),
-    # ==========================================
-    # 3. WEIGHT DECAY
-    # ==========================================
-    TrainingConfig(
-        "resnet50", 0.0, "cross_entropy",
-        "adamw", 0.005, 0.001, 16, 50
-    ),
-    TrainingConfig(
-        "resnet50", 0.0, "cross_entropy",
-        "adamw", 0.005, 0.005, 16, 50
+        model_name="resnet50",
+        fine_tuning="last_block",
+        dropout=0,
+        loss_name="cross_entropy",
+        optimizer_name="adamw",
+        learning_rate=0.005,
+        weight_decay=0.01,
+        batch_size=16,
+        epochs=50,
+        scheduler_name="cosine",
+        augmentation_level="strong",
     ),
     TrainingConfig(
-        "resnet50", 0.0, "cross_entropy",
-        "adamw", 0.005, 0.02, 16, 50
+        model_name="resnet50",
+        fine_tuning="last_two_blocks",
+        dropout=0,
+        loss_name="cross_entropy",
+        optimizer_name="adamw",
+        learning_rate=0.005,
+        weight_decay=0.01,
+        batch_size=16,
+        epochs=50,
+        augmentation_level="weak",
     ),
-    # ==========================================
-    # 4. DROPOUT
-    # ==========================================
     TrainingConfig(
-        "resnet50", 0.25, "cross_entropy",
-        "adamw", 0.005, 0.01, 16, 50
-    ),
-    TrainingConfig(
-        "resnet50", 0.5, "cross_entropy",
-        "adamw", 0.005, 0.01, 16, 50
+        model_name="resnet50",
+        fine_tuning="last_two_blocks",
+        dropout=0,
+        loss_name="cross_entropy",
+        optimizer_name="adamw",
+        learning_rate=0.005,
+        weight_decay=0.01,
+        batch_size=16,
+        epochs=50,
+        scheduler_name="cosine",
+        augmentation_level="strong",
     ),
 ]
 
 for config in configs:
     fold_results, fold_histories = train_validate_kfold(
         full_dataset,
-        get_images_transformations(),
         config=config,
         kfold_config=kfold_config
     )

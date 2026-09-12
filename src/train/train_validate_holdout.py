@@ -2,16 +2,16 @@ import torch, time, copy
 from torch.utils.data import DataLoader, Subset, random_split
 
 from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler, HoldoutConfig
+    create_scheduler, HoldoutConfig, create_augmentation
 from train import train_one_epoch, validate_model
 
 
 def train_validate_holdout(
     dataset,
-    transformations,
     config: TrainingConfig,
     holdout_config: HoldoutConfig
 ):
+    transformations = create_augmentation(config.augmentation_level)
     train_loader, val_loader = create_data_loaders(dataset, transformations, config, holdout_config)
 
     model = create_binary_model(config.model_name)

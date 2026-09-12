@@ -2,9 +2,10 @@ import streamlit as st
 import torch
 from pathlib import Path
 from PIL import Image
-from augmentation import get_images_transformations
 
-image_transformations = get_images_transformations()['val']
+from augmentation import weak_augmentation
+
+image_transformations = weak_augmentation()['val']
 
 MODEL_PATH = Path(__file__).resolve().parent / "results" / "resnet_aug.pt"
 modelo = torch.load(MODEL_PATH, weights_only=False)

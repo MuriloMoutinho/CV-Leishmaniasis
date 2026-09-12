@@ -1,6 +1,5 @@
 import torchvision
 
-from augmentation import get_images_transformations
 from config import TrainingConfig, HoldoutConfig
 from data import save_holdout_result
 from train import train_validate_holdout
@@ -18,20 +17,22 @@ holdout_config = HoldoutConfig(
 )
 
 configs = [
-    # ==========================================
-    # 2. LEARNING RATE
-    # ==========================================
     TrainingConfig(
-        "resnet50", 0.0, "cross_entropy",
-        "adamw", 0.004, 0.01, 16, 50
+        model_name="resnet50",
+        dropout=0,
+        loss_name="cross_entropy",
+        optimizer_name="adamw",
+        learning_rate=0.005,
+        weight_decay=0.01,
+        batch_size=16,
+        epochs=10,
+        augmentation_level="strong",
     ),
-
 ]
 
 for config in configs:
     fold_results, fold_histories = train_validate_holdout(
         full_dataset,
-        get_images_transformations(),
         config=config,
         holdout_config=holdout_config
     )

@@ -1,18 +1,19 @@
 import torch, time
 from torch.utils.data import DataLoader
 
-from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, create_scheduler
+from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, create_scheduler, \
+    create_augmentation
 from train import train_one_epoch, validate_model
 
 def train_validate_model(
     train_dataset,
     teste_dataset,
-    transformations,
     config: TrainingConfig,
     filename='model'
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    transformations = create_augmentation(config.augmentation_level)
     train_dataset.transform = transformations["train"]
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
 

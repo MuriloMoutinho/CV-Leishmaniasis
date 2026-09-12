@@ -10,6 +10,7 @@ class TrainingConfig:
     weight_decay: float
     batch_size: int
     epochs: int
+    augmentation_level: str = 'medium'
     scheduler_name: str | None = None
 
 @dataclass

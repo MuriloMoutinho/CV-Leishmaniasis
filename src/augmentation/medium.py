@@ -1,11 +1,10 @@
 from torchvision import transforms
 
-def get_images_transformations():
+def medium_augmentation(image_size):
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225]
     )
-    image_size = (683, 512) # mantem 4:3: 512x384 / 683x512 /768x576
 
     return {
         'train': transforms.Compose([
@@ -13,7 +12,7 @@ def get_images_transformations():
 
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
-            transforms.RandomRotation(360),
+            transforms.RandomApply([transforms.RandomRotation((180, 180))], p=0.5),
 
             transforms.ToTensor(),
             normalize

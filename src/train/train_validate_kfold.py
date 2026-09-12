@@ -3,13 +3,12 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Subset
 
 from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler
+    create_scheduler, create_augmentation
 from train import train_one_epoch, validate_model
 
 
 def train_validate_kfold(
     dataset,
-    transformations,
     config: TrainingConfig,
     kfold_config: KFoldConfig
 ):
@@ -20,6 +19,8 @@ def train_validate_kfold(
 
     fold_results = []
     fold_histories = []
+
+    transformations = create_augmentation(config.augmentation_level)
 
     for fold, (train_idx, val_idx) in enumerate(skf.split(labels_arr, labels), start=1):
 

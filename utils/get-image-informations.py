@@ -3,8 +3,7 @@ from PIL import Image
 import numpy as np
 
 SET_DATASET = "AIR_LEISH/Set2/Images"
-IMAGE_DIR = Path("../datasets/" + SET_DATASET)
-
+IMAGE_DIR = Path("../datasets/raw/" + SET_DATASET)
 EXTENSIONS = { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp" }
 
 resolutions = set()
