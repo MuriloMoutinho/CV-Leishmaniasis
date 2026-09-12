@@ -30,7 +30,7 @@ def train_validate_kfold(
 
         train_loader, val_loader = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
 
-        fold_model = create_binary_model(config.model_name)
+        fold_model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
         optimizer = create_optimizer(config.optimizer_name, fold_model, config.learning_rate, config.weight_decay)
         loss_function = create_loss_function(config.loss_name)
         scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None

@@ -17,16 +17,15 @@ def create_loss_function(loss_name):
 
     return None
 
-def create_binary_model(model_name, dropout=0):
+def create_binary_model(model_name, dropout=0, fine_tuning=None):
     if model_name == "resnet50":
-        return create_binary_resnet(dropout)
+        return create_binary_resnet(dropout, fine_tuning)
     elif model_name == "densenet121":
-        return create_binary_densenet(dropout)
+        return create_binary_densenet(dropout, fine_tuning)
     elif model_name == "efficientnetb0":
-        return create_binary_efficientnet(dropout)
+        return create_binary_efficientnet(dropout, fine_tuning)
 
     return None
-
 
 def create_scheduler(scheduler_name, optimizer):
     if scheduler_name == "cosine":

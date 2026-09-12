@@ -20,7 +20,7 @@ def train_validate_model(
     teste_dataset.transform = transformations["val"]
     test_loader = DataLoader(teste_dataset, batch_size=config.batch_size, shuffle=False)
 
-    model = create_binary_model(config.model_name)
+    model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
     optimizer = create_optimizer(config.optimizer_name, model, config.learning_rate, config.weight_decay)
     loss_function = create_loss_function(config.loss_name)
     scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None

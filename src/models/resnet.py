@@ -3,19 +3,25 @@ import torch.nn as nn
 from torchvision.models import ResNet50_Weights
 
 
-def create_binary_resnet(dropout):
+def create_binary_resnet(dropout, fine_tuning=None):
     model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
 
     for param in model.parameters():
         param.requires_grad = False
-    # trava o treinamento da rede
+
+    if fine_tuning == "last_block":
+        for param in model.layer4.parameters():
+            param.requires_grad = True
+
+    elif fine_tuning == "last_two_blocks":
+        for param in model.layer3.parameters():
+            param.requires_grad = True
+
+        for param in model.layer4.parameters():
+            param.requires_grad = True
 
     model.fc = nn.Sequential(
         nn.Dropout(p=dropout),
         nn.Linear(model.fc.in_features, 1)
     )
-    # Essa linha substitui a ultima camada.
-    # define que a rede neural irá acabar em 1 nós (possui 2 classes, porém o resultado virá em um só float)
-    # Define o droupout ao ser treinado
-
     return model

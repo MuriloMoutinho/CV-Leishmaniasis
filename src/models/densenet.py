@@ -2,11 +2,22 @@ from torchvision import models
 import torch.nn as nn
 from torchvision.models import DenseNet121_Weights
 
-def create_binary_densenet(dropout):
+def create_binary_densenet(dropout, fine_tuning=None):
     model = models.densenet121(weights=DenseNet121_Weights.DEFAULT)
 
     for param in model.parameters():
         param.requires_grad = False
+
+    if fine_tuning == "last_block":
+        for param in model.features.denseblock4.parameters():
+            param.requires_grad = True
+
+    elif fine_tuning == "last_two_blocks":
+        for param in model.features.denseblock3.parameters():
+            param.requires_grad = True
+
+        for param in model.features.denseblock4.parameters():
+            param.requires_grad = True
 
     model.classifier = nn.Sequential(
         nn.Dropout(p=dropout),
