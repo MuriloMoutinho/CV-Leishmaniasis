@@ -16,7 +16,7 @@ def validate_model(model, data_loader, loss_function, device):
             images_batch = images_batch.to(device)
             labels = labels.float().to(device)
 
-            outputs = model(images_batch).squeeze(1) # Logits [12312, 124123]
+            outputs = model(images_batch).squeeze(1) 
 
             loss = loss_function(outputs, labels)
             total_loss += loss.item() * images_batch.size(0)

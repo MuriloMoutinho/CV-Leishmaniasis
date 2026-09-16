@@ -12,7 +12,6 @@ def medium_augmentation(image_size):
 
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
-            transforms.RandomApply([transforms.RandomRotation((180, 180))], p=0.5),
 
             transforms.ToTensor(),
             normalize

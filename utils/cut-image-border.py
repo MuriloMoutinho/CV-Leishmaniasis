@@ -1,6 +1,5 @@
 from pathlib import Path
-from PIL import Image, ImageOps
-import numpy as np
+from PIL import Image
 
 SET_DATASET = "DeepLeish/Positive"
 IMAGE_DIR = Path("../datasets/raw/" + SET_DATASET)

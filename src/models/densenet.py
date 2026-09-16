@@ -9,11 +9,11 @@ def create_binary_densenet(dropout, fine_tuning=None):
         param.requires_grad = False
 
     if fine_tuning in ["last_block", "last_two_blocks"]:
-        for param in model.features.denseblock3.parameters():
+        for param in model.features.denseblock4.parameters():
             param.requires_grad = True
 
     if fine_tuning == "last_two_blocks":
-        for param in model.features.denseblock4.parameters():
+        for param in model.features.denseblock3.parameters():
             param.requires_grad = True
 
     model.classifier = nn.Sequential(

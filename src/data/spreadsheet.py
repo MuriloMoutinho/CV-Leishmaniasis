@@ -25,30 +25,30 @@ def save_kfold_result(
     result = {
         "experiment_id": experiment_id,
         "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time": df_folds["time"].sum() / 60,
+        "time": round(df_folds["time"].sum() / 60, 2),
     }
 
     result.update(asdict(config))
 
     result.update({
-        "accuracy_mean": df_folds["accuracy"].mean() * 100,
-        "accuracy_std": df_folds["accuracy"].std() * 100,
+        "accuracy_mean":  round(df_folds["accuracy"].mean() * 100, 2),
+        "accuracy_std":  round(df_folds["accuracy"].std() * 100, 2),
 
-        "precision_mean": df_folds["precision"].mean() * 100,
-        "precision_std": df_folds["precision"].std() * 100,
+        "precision_mean":  round(df_folds["precision"].mean() * 100, 2),
+        "precision_std":  round(df_folds["precision"].std() * 100, 2),
 
-        "recall_mean": df_folds["recall"].mean() * 100,
-        "recall_std": df_folds["recall"].std() * 100,
+        "recall_mean":  round(df_folds["recall"].mean() * 100, 2),
+        "recall_std":  round(df_folds["recall"].std() * 100, 2),
 
-        "f1_mean": df_folds["f1"].mean() * 100,
-        "f1_std": df_folds["f1"].std() * 100,
+        "f1_mean":  round(df_folds["f1"].mean() * 100, 2),
+        "f1_std":  round(df_folds["f1"].std() * 100, 2),
 
-        "auc_mean": df_folds["auc"].mean() * 100,
-        "auc_std": df_folds["auc"].std() * 100,
+        "auc_mean":  round(df_folds["auc"].mean() * 100, 2),
+        "auc_std":  round(df_folds["auc"].std() * 100, 2),
 
-        "best_epoch_mean": df_folds["epoch"].mean(),
-        "best_epoch_median": df_folds["epoch"].median(),
-        "best_epoch_std": df_folds["epoch"].std(),
+        "best_epoch_mean":  round(df_folds["epoch"].mean(), 2),
+        "best_epoch_median":  round(df_folds["epoch"].median(), 2),
+        "best_epoch_std":  round(df_folds["epoch"].std(), 2),
     })
 
     if kfold_config is not None:
@@ -78,18 +78,18 @@ def save_holdout_result(
     result = {
         "experiment_id": experiment_id,
         "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time": model_result['time'] / 60,
+        "time": round(model_result['time'] / 60, 2)
     }
 
     result.update(asdict(config))
 
     result.update({
-        "accuracy": model_result['accuracy'] * 100,
-        "precision": model_result['precision'] * 100,
-        "recall": model_result['recall'] * 100,
-        "f1": model_result['f1'] * 100,
-        "auc": model_result['auc'] * 100,
-        "best_epoch": model_result["epoch"],
+        "accuracy": round(model_result['accuracy'] * 100, 2),
+        "precision": round(model_result['precision'] * 100, 2),
+        "recall": round(model_result['recall'] * 100, 2),
+        "f1": round(model_result['f1'] * 100, 2),
+        "auc": round(model_result['auc'] * 100, 2),
+        "best_epoch": round(model_result["epoch"], 2),
     })
 
     result.update(asdict(holdout_config))
@@ -117,17 +117,17 @@ def save_training_result(
     result = {
         "experiment_id": experiment_id,
         "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time": model_result['time'] / 60,
+        "time":  round(model_result['time'] / 60, 2),
     }
 
     result.update(asdict(config))
 
     result.update({
-        "accuracy": model_result['accuracy'] * 100,
-        "precision": model_result['precision'] * 100,
-        "recall": model_result['recall'] * 100,
-        "f1": model_result['f1'] * 100,
-        "auc": model_result['auc'] * 100,
+        "accuracy": round(model_result['accuracy'] * 100, 2),
+        "precision": round(model_result['precision'] * 100, 2),
+        "recall": round(model_result['recall'] * 100, 2),
+        "f1": round(model_result['f1'] * 100, 2),
+        "auc": round(model_result['auc'] * 100, 2),
     })
 
     df_result = pd.DataFrame([result])

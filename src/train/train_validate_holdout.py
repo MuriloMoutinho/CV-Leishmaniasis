@@ -15,10 +15,11 @@ def train_validate_holdout(
     train_loader, val_loader = create_data_loaders(dataset, transformations, config, holdout_config)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.fine_tuning)
-    optimizer = create_optimizer(config.optimizer_name, param_groups, config.weight_decay)
+    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay, config.fine_tuning)
+    optimizer = create_optimizer(config.optimizer_name, param_groups)
     loss_function = create_loss_function(config.loss_name)
-    scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
+    scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
+        if config.scheduler_name is not None else None
 
     history, best_metrics_epoch = train_and_validate(
         model=model,
@@ -32,7 +33,7 @@ def train_validate_holdout(
         metric_to_monitor=holdout_config.metric_to_monitor
     )
 
-    print(f"\nResultados melhor época:")
+    print(f"\nResultados melhor época: {best_metrics_epoch['epoch']:.4f}")
     print(f"Accuracy : {best_metrics_epoch['accuracy']:.4f}")
     print(f"Precision: {best_metrics_epoch['precision']:.4f}")
     print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
@@ -53,12 +54,18 @@ def create_data_loaders(dataset, transformations, config, holdout_config):
     train_dataset = copy.copy(dataset)
     train_dataset.transform = transformations["train"]
     train_fold = Subset(train_dataset, train_indices)
-    train_loader = DataLoader(train_fold, batch_size=config.batch_size, shuffle=True)
+    train_loader = DataLoader(
+        train_fold, batch_size=config.batch_size, shuffle=True,
+        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
+    )
 
     val_dataset = copy.copy(dataset)
     val_dataset.transform = transformations["val"]
     val_fold = Subset(val_dataset, val_indices)
-    val_loader = DataLoader(val_fold, batch_size=config.batch_size, shuffle=False)
+    val_loader = DataLoader(
+        val_fold, batch_size=config.batch_size, shuffle=False,
+        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
+    )
 
     return train_loader, val_loader
 
@@ -107,14 +114,15 @@ def train_and_validate(
 
         print(
             f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f} | "
-            f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f}"
-            f"Val Pre: {val_metrics['precision']:.4f} | Val Rec: {val_metrics['recall']:.4f}"
+            f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f} "
+            f"Val Pre: {val_metrics['precision']:.4f} | Val Rec: {val_metrics['recall']:.4f} "
             f"Val F1: {val_metrics['f1']:.4f} | Val Auc: {val_metrics['auc']:.4f}"
         )
 
         current_monitored_metric = val_metrics[metric_to_monitor]
 
         # EARLY STOPPING
+        # se for necessário usar loss como métrica observável, o código precisa ser ajustado
         if current_monitored_metric > best_monitored_metric:
             best_monitored_metric = current_monitored_metric
             epochs_without_improvement = 0

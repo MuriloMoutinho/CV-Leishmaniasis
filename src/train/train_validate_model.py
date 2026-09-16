@@ -9,22 +9,29 @@ def train_validate_model(
     train_dataset,
     teste_dataset,
     config: TrainingConfig,
-    filename='model'
+    filename=None
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transformations = create_augmentation(config.augmentation_level)
     train_dataset.transform = transformations["train"]
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
+    train_loader = DataLoader(
+        train_dataset, batch_size=config.batch_size, shuffle=True,
+        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
+    )
 
     teste_dataset.transform = transformations["val"]
-    test_loader = DataLoader(teste_dataset, batch_size=config.batch_size, shuffle=False)
+    test_loader = DataLoader(
+        teste_dataset, batch_size=config.batch_size, shuffle=False,
+        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
+    )
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.fine_tuning)
-    optimizer = create_optimizer(config.optimizer_name, param_groups, config.weight_decay)
+    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay, config.fine_tuning)
+    optimizer = create_optimizer(config.optimizer_name, param_groups)
     loss_function = create_loss_function(config.loss_name)
-    scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
+    scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
+        if config.scheduler_name is not None else None
 
     start = time.time()
 

@@ -15,7 +15,7 @@ def train_validate_kfold(
 
     labels = numpy.array(dataset.targets)
     labels_arr = numpy.zeros(len(labels))
-    skf = StratifiedKFold(n_splits=kfold_config.n_splits ,shuffle=True, random_state=42)
+    skf = StratifiedKFold(n_splits=kfold_config.n_splits, shuffle=True, random_state=kfold_config.val_split_seed)
 
     fold_results = []
     fold_histories = []
@@ -31,10 +31,11 @@ def train_validate_kfold(
         train_loader, val_loader = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
 
         fold_model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-        param_groups = get_optimizer_param_groups(fold_model, config.learning_rate, config.fine_tuning)
-        optimizer = create_optimizer(config.optimizer_name, param_groups, config.weight_decay)
+        param_groups = get_optimizer_param_groups(fold_model, config.learning_rate, config.weight_decay, config.fine_tuning)
+        optimizer = create_optimizer(config.optimizer_name, param_groups)
         loss_function = create_loss_function(config.loss_name)
-        scheduler = create_scheduler(config.scheduler_name, optimizer) if config.scheduler_name is not None else None
+        scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
+            if config.scheduler_name is not None else None
 
         history, best_metrics_epoch = train_and_validate_fold(
             model=fold_model,
@@ -51,7 +52,8 @@ def train_validate_kfold(
         fold_results.append(best_metrics_epoch)
         fold_histories.append(history)
 
-        print(f"\nResultados Fold {fold}:")
+        print(f"\nResultados Fold {fold}:" )
+        print(f"Resultados melhor época: {best_metrics_epoch['epoch']:.4f}")
         print(f"Accuracy : {best_metrics_epoch['accuracy']:.4f}")
         print(f"Precision: {best_metrics_epoch['precision']:.4f}")
         print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
@@ -65,12 +67,18 @@ def create_data_loaders(dataset, transformations, config, train_idx, val_idx):
     train_dataset = copy.copy(dataset)
     train_dataset.transform = transformations["train"]
     train_fold = Subset(train_dataset, train_idx)
-    train_loader = DataLoader(train_fold, batch_size=config.batch_size, shuffle=True)
+    train_loader = DataLoader(
+        train_fold, batch_size=config.batch_size, shuffle=True,
+        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
+    )
 
     val_dataset = copy.copy(dataset)
     val_dataset.transform = transformations["val"]
     val_fold = Subset(val_dataset, val_idx)
-    val_loader = DataLoader(val_fold, batch_size=config.batch_size, shuffle=False)
+    val_loader = DataLoader(
+        val_fold, batch_size=config.batch_size, shuffle=False,
+        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
+    )
 
     return train_loader, val_loader
 
@@ -124,6 +132,7 @@ def train_and_validate_fold(
         current_monitored_metric = val_metrics[metric_to_monitor]
 
         # EARLY STOPPING
+        # se for necessário usar loss como métrica observável, o código precisa ser ajustado
         if current_monitored_metric > best_monitored_metric:
             best_monitored_metric = current_monitored_metric
             epochs_without_improvement = 0

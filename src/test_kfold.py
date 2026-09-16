@@ -1,3 +1,6 @@
+import gc
+
+import torch.cuda
 import torchvision
 
 from config import KFoldConfig, TrainingConfig
@@ -11,74 +14,42 @@ full_dataset = torchvision.datasets.ImageFolder(root=r"../datasets/test/train")
 
 kfold_config = KFoldConfig(
     n_splits=5,
-    patience_early_stopping=10,
+    val_split_seed=42,
+    patience_early_stopping=8,
     metric_to_monitor="f1",
 )
 
 configs = [
-    TrainingConfig(
-        model_name="resnet50",
-        fine_tuning="last_block",
-        dropout=0,
-        loss_name="cross_entropy",
-        optimizer_name="adamw",
-        learning_rate=0.005,
-        weight_decay=0.01,
-        batch_size=16,
-        epochs=50,
-        augmentation_level="weak",
-    ),
-    TrainingConfig(
-        model_name="resnet50",
-        fine_tuning="last_block",
-        dropout=0,
-        loss_name="cross_entropy",
-        optimizer_name="adamw",
-        learning_rate=0.005,
-        weight_decay=0.01,
-        batch_size=16,
-        epochs=50,
-        scheduler_name="cosine",
-        augmentation_level="strong",
-    ),
-    TrainingConfig(
-        model_name="resnet50",
-        fine_tuning="last_two_blocks",
-        dropout=0,
-        loss_name="cross_entropy",
-        optimizer_name="adamw",
-        learning_rate=0.005,
-        weight_decay=0.01,
-        batch_size=16,
-        epochs=50,
-        augmentation_level="weak",
-    ),
-    TrainingConfig(
-        model_name="resnet50",
-        fine_tuning="last_two_blocks",
-        dropout=0,
-        loss_name="cross_entropy",
-        optimizer_name="adamw",
-        learning_rate=0.005,
-        weight_decay=0.01,
-        batch_size=16,
-        epochs=50,
-        scheduler_name="cosine",
-        augmentation_level="strong",
-    ),
+    TrainingConfig(model_name="resnet50", fine_tuning="last_block", dropout=0,
+        loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.003,
+        weight_decay=0.01, batch_size=16, epochs=30, scheduler_name="warmup+cosine",
+        augmentation_level="weak"),
+    # ============ DENSENET121 ============
+    TrainingConfig(model_name="densenet121", fine_tuning="last_block", dropout=0,
+        loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
+        weight_decay=0.01, batch_size=16, epochs=30, scheduler_name="warmup+cosine",
+        augmentation_level="weak"),
+    # ============ EFFICIENTNETB0 ============
+    TrainingConfig(model_name="efficientnetb0", fine_tuning="last_two_blocks", dropout=0,
+        loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
+        weight_decay=0.01, batch_size=16, epochs=30, scheduler_name="warmup+cosine",
+        augmentation_level="weak"),
 ]
 
-for config in configs:
-    fold_results, fold_histories = train_validate_kfold(
-        full_dataset,
-        config=config,
-        kfold_config=kfold_config
-    )
+if __name__ == "__main__":
+    for config in configs:
+        fold_results, fold_histories = train_validate_kfold(
+            full_dataset,
+            config=config,
+            kfold_config=kfold_config
+        )
+        torch.cuda.empty_cache()
+        gc.collect()
 
-    save_kfold_result(
-        fold_results=fold_results,
-        config=config,
-        kfold_config=kfold_config,
-        filename="experiments/kfold.csv"
-    )
+        save_kfold_result(
+            fold_results=fold_results,
+            config=config,
+            kfold_config=kfold_config,
+            filename="experiments/kfold.csv"
+        )
 

@@ -16,5 +16,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = torch.load(model_path, weights_only=False)
 # model.load_state_dict(torch.load("results/melhor_modelo.pt"))
 
-metrics = validate_model(model, test_data_loader, create_loss_function("cross_entropy"), device)
-print(metrics)
+if __name__ == "__main__":
+    metrics = validate_model(model, test_data_loader, create_loss_function("cross_entropy"), device)
+    print(metrics)
