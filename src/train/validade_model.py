@@ -3,7 +3,7 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_s
 
 def validate_model(model, data_loader, loss_function, device):
     model.eval()
-    model.to(device)
+    model = model.to(device)
 
     total_loss = 0.0
     all_labels = []

@@ -5,7 +5,7 @@ from torch import nn
 
 def train_one_epoch(data_loader, model, loss_function, optimizer, device, scheduler=None):
     model.train()
-    model.to(device)
+    model = model.to(device)
     freeze_bn_in_frozen_layers(model)
 
     total_loss = 0.0

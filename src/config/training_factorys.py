@@ -77,9 +77,15 @@ def get_model_layers(model):
 
     return None
 
-def create_loss_function(loss_name):
+def compute_pos_weight(dataset, indices):
+    labels = torch.tensor([dataset.samples[i][1] for i in indices])
+    n_pos = (labels == 1).sum().item()
+    n_neg = (labels == 0).sum().item()
+    return torch.tensor([n_neg / n_pos])
+
+def create_loss_function(loss_name, pos_weight):
     if loss_name == "cross_entropy":
-        return torch.nn.BCEWithLogitsLoss()
+        return torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     return None
 
@@ -130,13 +136,6 @@ def create_augmentation(augmentation_level_name):
     #768, 1024	2x	~10-15 px
     #960, 1280	1,6x	~12,5-18,75 px
     #1152, 1536	1,33x	~15-22,5 px
-
-    #if dataset_name.upper() == "DLB":
-#        image_size = (512, 683) # mantem 4:3: 512x384 / 683x512 /768x576
-#    elif dataset_name.upper() == "AIR":
-#        image_size = (465, 683)
-#    elif dataset_name.upper() == "DEEP":
-#        image_size = (512, 683)
 
     if augmentation_level_name == "weak":
         return weak_augmentation(image_size)

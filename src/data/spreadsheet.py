@@ -1,5 +1,6 @@
 import os
 from dataclasses import asdict
+from pathlib import Path
 
 import pandas as pd
 from datetime import datetime
@@ -10,6 +11,7 @@ from config import TrainingConfig, KFoldConfig, HoldoutConfig
 def save_kfold_result(
     fold_results,
     config: TrainingConfig,
+    dataset_name: str,
     kfold_config: KFoldConfig,
     filename="kfold.csv"
 ):
@@ -26,6 +28,7 @@ def save_kfold_result(
         "experiment_id": experiment_id,
         "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time": round(df_folds["time"].sum() / 60, 2),
+        "dataset_name": dataset_name,
     }
 
     result.update(asdict(config))
@@ -57,6 +60,9 @@ def save_kfold_result(
     df_result = pd.DataFrame([result])
     df_result = pd.concat([df_old, df_result], ignore_index=True)
 
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")
     return df_result
@@ -66,6 +72,7 @@ def save_holdout_result(
     model_result,
     config: TrainingConfig,
     holdout_config: HoldoutConfig,
+    dataset_name: str,
     filename="holdout.csv"
 ):
     if os.path.exists(filename):
@@ -78,7 +85,8 @@ def save_holdout_result(
     result = {
         "experiment_id": experiment_id,
         "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time": round(model_result['time'] / 60, 2)
+        "time": round(model_result['time'] / 60, 2),
+        "dataset_name": dataset_name,
     }
 
     result.update(asdict(config))
@@ -97,6 +105,9 @@ def save_holdout_result(
     df_result = pd.DataFrame([result])
     df_result = pd.concat([df_old, df_result], ignore_index=True)
 
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")
     return df_result
@@ -105,6 +116,7 @@ def save_holdout_result(
 def save_training_result(
     model_result,
     config: TrainingConfig,
+    dataset_name: str,
     filename="training.csv"
 ):
     if os.path.exists(filename):
@@ -118,6 +130,7 @@ def save_training_result(
         "experiment_id": experiment_id,
         "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time":  round(model_result['time'] / 60, 2),
+        "dataset_name": dataset_name,
     }
 
     result.update(asdict(config))
@@ -132,6 +145,9 @@ def save_training_result(
 
     df_result = pd.DataFrame([result])
     df_result = pd.concat([df_old, df_result], ignore_index=True)
+
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")

@@ -1,8 +1,9 @@
 import torch, time, copy
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset, random_split
 
 from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler, HoldoutConfig, create_augmentation, get_optimizer_param_groups
+    create_scheduler, HoldoutConfig, create_augmentation, get_optimizer_param_groups, compute_pos_weight
 from train import train_one_epoch, validate_model
 
 
@@ -11,13 +12,19 @@ def train_validate_holdout(
     config: TrainingConfig,
     holdout_config: HoldoutConfig
 ):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     transformations = create_augmentation(config.augmentation_level)
-    train_loader, val_loader = create_data_loaders(dataset, transformations, config, holdout_config)
+    train_loader, val_loader, pos_weight = create_data_loaders(dataset, transformations, config, holdout_config)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
+
     param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay, config.fine_tuning)
     optimizer = create_optimizer(config.optimizer_name, param_groups)
-    loss_function = create_loss_function(config.loss_name)
+
+    pos_weight = pos_weight.to(device)
+    loss_function = create_loss_function(config.loss_name, pos_weight)
+
     scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
         if config.scheduler_name is not None else None
 
@@ -44,12 +51,15 @@ def train_validate_holdout(
     return best_metrics_epoch, history
 
 def create_data_loaders(dataset, transformations, config, holdout_config):
-    generator = torch.Generator().manual_seed(holdout_config.val_split_seed)
-    indices = torch.randperm(len(dataset), generator=generator).tolist()
+    labels = [label for _, label in dataset.samples]
+    indices = list(range(len(dataset)))
 
-    val_size = int(len(dataset) * (holdout_config.val_ratio/100))
-    val_indices = indices[:val_size]
-    train_indices = indices[val_size:]
+    train_indices, val_indices = train_test_split(
+        indices,
+        test_size=holdout_config.val_ratio / 100,
+        stratify=labels,
+        random_state=holdout_config.val_split_seed,
+    )
 
     train_dataset = copy.copy(dataset)
     train_dataset.transform = transformations["train"]
@@ -67,7 +77,9 @@ def create_data_loaders(dataset, transformations, config, holdout_config):
         num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
     )
 
-    return train_loader, val_loader
+    pos_weight = compute_pos_weight(dataset, train_indices)
+
+    return train_loader, val_loader, pos_weight
 
 def train_and_validate(
     model,
@@ -81,7 +93,7 @@ def train_and_validate(
     metric_to_monitor
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    model = model.to(device)
 
     history = []
 

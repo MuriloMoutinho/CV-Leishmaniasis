@@ -3,7 +3,7 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Subset
 
 from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler, create_augmentation, get_optimizer_param_groups
+    create_scheduler, create_augmentation, get_optimizer_param_groups, compute_pos_weight
 from train import train_one_epoch, validate_model
 
 
@@ -12,6 +12,7 @@ def train_validate_kfold(
     config: TrainingConfig,
     kfold_config: KFoldConfig
 ):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     labels = numpy.array(dataset.targets)
     labels_arr = numpy.zeros(len(labels))
@@ -28,12 +29,16 @@ def train_validate_kfold(
         print(f"FOLD {fold}/{kfold_config.n_splits}")
         print("=" * 60)
 
-        train_loader, val_loader = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
+        train_loader, val_loader, pos_weight = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
 
         fold_model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
+
         param_groups = get_optimizer_param_groups(fold_model, config.learning_rate, config.weight_decay, config.fine_tuning)
         optimizer = create_optimizer(config.optimizer_name, param_groups)
-        loss_function = create_loss_function(config.loss_name)
+
+        pos_weight = pos_weight.to(device)
+        loss_function = create_loss_function(config.loss_name, pos_weight)
+
         scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
             if config.scheduler_name is not None else None
 
@@ -80,7 +85,9 @@ def create_data_loaders(dataset, transformations, config, train_idx, val_idx):
         num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
     )
 
-    return train_loader, val_loader
+    pos_weight = compute_pos_weight(dataset, train_idx)
+
+    return train_loader, val_loader, pos_weight
 
 def train_and_validate_fold(
     model,
@@ -94,7 +101,7 @@ def train_and_validate_fold(
     metric_to_monitor
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    model = model.to(device)
 
     history = []
 

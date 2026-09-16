@@ -15,15 +15,15 @@ def strong_augmentation(image_size):
             transforms.RandomApply([transforms.RandomRotation((180, 180))], p=0.5),
 
             transforms.ColorJitter(
-                brightness=0.2,
-                contrast=0.2,
-                saturation=0.2,
-                hue=0.1
+                brightness=0.3,
+                contrast=0.3,
+                saturation=0.25,
+                hue=0.05
             ),
-            transforms.GaussianBlur(
-                kernel_size=5,
-                sigma=(0.1, 2.0)
-            ),
+            transforms.RandomAutocontrast(p=0.3),
+            transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.3),
+
+            transforms.GaussianBlur(kernel_size=9, sigma=(0.1, 2.5)),
 
             transforms.ToTensor(),
             normalize

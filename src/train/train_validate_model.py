@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import torch, time
 from torch.utils.data import DataLoader
 
 from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, create_scheduler, \
-    create_augmentation, get_optimizer_param_groups
+    create_augmentation, get_optimizer_param_groups, compute_pos_weight
 from train import train_one_epoch, validate_model
 
 def train_validate_model(
@@ -27,9 +29,14 @@ def train_validate_model(
     )
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
+
     param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay, config.fine_tuning)
     optimizer = create_optimizer(config.optimizer_name, param_groups)
-    loss_function = create_loss_function(config.loss_name)
+
+    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples)))
+    pos_weight = pos_weight.to(device)
+    loss_function = create_loss_function(config.loss_name, pos_weight)
+
     scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
         if config.scheduler_name is not None else None
 
@@ -47,7 +54,9 @@ def train_validate_model(
         print(f"Tempo época: {end_epoch - start_epoch:.2f}s")
 
     if filename is not None:
-        torch.save(model, filename)
+        path = Path(filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(model.state_dict(), filename)
 
     end = time.time()
     print(f"Tempo final: {end - start:.2f}s")
