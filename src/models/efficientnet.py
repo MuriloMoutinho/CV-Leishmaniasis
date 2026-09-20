@@ -8,6 +8,9 @@ def create_binary_efficientnet(dropout, fine_tuning=None):
     for param in model.parameters():
         param.requires_grad = False
 
+    if fine_tuning not in (None, "last_block", "last_two_blocks"):
+            raise ValueError("Fine_tuning inválido")
+
     if fine_tuning in ["last_block", "last_two_blocks"]:
         for param in model.features[-1].parameters():
             param.requires_grad = True

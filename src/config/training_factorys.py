@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.utils.data import ConcatDataset
 from torchvision import models
 
 from augmentation import weak_augmentation, medium_augmentation, strong_augmentation
@@ -11,7 +12,7 @@ def create_optimizer(optimizer_name, param_group):
     elif optimizer_name == "adam":
         return torch.optim.Adam(param_group)
 
-    return None
+    raise TypeError("Otimizador incorreto")
 
 def get_optimizer_param_groups(model, learning_rate, weight_decay, fine_tuning=None):
     layers = get_model_layers(model)
@@ -75,7 +76,7 @@ def get_model_layers(model):
             "second_last_block": model.features.denseblock3,
         }
 
-    return None
+    raise TypeError("Modelo incorreto")
 
 def compute_pos_weight(dataset, indices):
     labels = torch.tensor([dataset.samples[i][1] for i in indices])
@@ -87,7 +88,7 @@ def create_loss_function(loss_name, pos_weight):
     if loss_name == "cross_entropy":
         return torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    return None
+    raise TypeError("Loss function incorreta")
 
 def create_binary_model(model_name, dropout=0, fine_tuning=None):
     if model_name == "resnet50":
@@ -97,7 +98,7 @@ def create_binary_model(model_name, dropout=0, fine_tuning=None):
     elif model_name == "efficientnetb0":
         return create_binary_efficientnet(dropout, fine_tuning)
 
-    return None
+    raise TypeError("Modelo incorreto")
 
 def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
     if scheduler_name == "warmup+cosine":
@@ -117,7 +118,7 @@ def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
             end_factor=1.0,
             total_iters=warmup_steps
         )
-        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cosine_steps, eta_min=0.0,)
+        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cosine_steps, eta_min=0.0)
 
         return torch.optim.lr_scheduler.SequentialLR(
             optimizer,
@@ -125,17 +126,10 @@ def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
             milestones=[warmup_steps]
         )
 
-    return None
+    raise TypeError("Scheduler incorreto")
 
 def create_augmentation(augmentation_level_name):
     image_size = (576, 768)
-
-    #224, 299
-    #384, 512	4x	~5-7,5 px
-    #576, 768	2,67x	~7,5-11,3 px
-    #768, 1024	2x	~10-15 px
-    #960, 1280	1,6x	~12,5-18,75 px
-    #1152, 1536	1,33x	~15-22,5 px
 
     if augmentation_level_name == "weak":
         return weak_augmentation(image_size)
@@ -144,4 +138,4 @@ def create_augmentation(augmentation_level_name):
     elif augmentation_level_name == "strong":
         return strong_augmentation(image_size)
 
-    return None
+    raise TypeError("Augmentation incorreto")
