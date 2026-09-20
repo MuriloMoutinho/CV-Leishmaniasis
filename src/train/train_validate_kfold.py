@@ -63,7 +63,8 @@ def train_validate_kfold(
         print(f"Precision: {best_metrics_epoch['precision']:.4f}")
         print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
         print(f"F1       : {best_metrics_epoch['f1']:.4f}")
-        print(f"AUC      : {best_metrics_epoch['auc']:.4f}")
+        print(f"ROC AUC  : {best_metrics_epoch['roc_auc']:.4f}")
+        print(f"PR AUC   : {best_metrics_epoch['pr_auc']:.4f}")
         print(f"Tempo fold: {best_metrics_epoch['time']:.2f}s")
 
     return fold_results, fold_histories
@@ -128,7 +129,8 @@ def train_and_validate_fold(
             "val_precision": val_metrics['precision'],
             "val_recall": val_metrics['recall'],
             "val_f1": val_metrics['f1'],
-            "val_auc": val_metrics['auc']
+            "val_roc_auc": val_metrics['roc_auc'],
+            "val_pr_auc": val_metrics['pr_auc']
         })
 
         print(

@@ -45,7 +45,8 @@ def train_validate_holdout(
     print(f"Precision: {best_metrics_epoch['precision']:.4f}")
     print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
     print(f"F1       : {best_metrics_epoch['f1']:.4f}")
-    print(f"AUC      : {best_metrics_epoch['auc']:.4f}")
+    print(f"ROC AUC  : {best_metrics_epoch['roc_auc']:.4f}")
+    print(f"PR AUC   : {best_metrics_epoch['pr_auc']:.4f}")
     print(f"Tempo total: {best_metrics_epoch['time']:.2f}s")
 
     return best_metrics_epoch, history
@@ -121,14 +122,16 @@ def train_and_validate(
             "val_precision": val_metrics['precision'],
             "val_recall": val_metrics['recall'],
             "val_f1": val_metrics['f1'],
-            "val_auc": val_metrics['auc']
+            "val_roc_auc": val_metrics['roc_auc'],
+            "val_pr_auc": val_metrics['pr_auc']
         })
 
         print(
             f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f} | "
-            f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f} "
-            f"Val Pre: {val_metrics['precision']:.4f} | Val Rec: {val_metrics['recall']:.4f} "
-            f"Val F1: {val_metrics['f1']:.4f} | Val Auc: {val_metrics['auc']:.4f}"
+            f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f} | "
+            f"Val Pre: {val_metrics['precision']:.4f} | Val Rec: {val_metrics['recall']:.4f} | "
+            f"Val F1: {val_metrics['f1']:.4f} | Val Auc: {val_metrics['roc_auc']:.4f} | "
+            f"Val Pr Auc: {val_metrics['pr_auc']:.4f}"
         )
 
         current_monitored_metric = val_metrics[metric_to_monitor]

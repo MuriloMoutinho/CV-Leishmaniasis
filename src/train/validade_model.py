@@ -1,5 +1,6 @@
 import torch
-from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, roc_auc_score)
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, roc_auc_score,
+                             average_precision_score)
 
 def validate_model(model, data_loader, loss_function, device):
     model.eval()
@@ -33,7 +34,8 @@ def validate_model(model, data_loader, loss_function, device):
     precision = precision_score(all_labels, all_predictions, zero_division=0)
     recall = recall_score(all_labels, all_predictions, zero_division=0)
     f1 = f1_score(all_labels, all_predictions, zero_division=0)
-    auc = roc_auc_score(all_labels, all_probabilities)
+    roc_auc = roc_auc_score(all_labels, all_probabilities)
+    pr_auc = average_precision_score(all_labels, all_probabilities)
 
     metrics = {
         "loss": average_loss,
@@ -41,7 +43,8 @@ def validate_model(model, data_loader, loss_function, device):
         "precision": precision,
         "recall": recall,
         "f1": f1,
-        "auc": auc
+        "roc_auc": roc_auc,
+        "pr_auc": pr_auc,
     }
 
     return metrics

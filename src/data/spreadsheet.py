@@ -34,6 +34,9 @@ def save_kfold_result(
     result.update(asdict(config))
 
     result.update({
+        "f1_mean":  round(df_folds["f1"].mean() * 100, 2),
+        "f1_std":  round(df_folds["f1"].std() * 100, 2),
+
         "accuracy_mean":  round(df_folds["accuracy"].mean() * 100, 2),
         "accuracy_std":  round(df_folds["accuracy"].std() * 100, 2),
 
@@ -43,11 +46,11 @@ def save_kfold_result(
         "recall_mean":  round(df_folds["recall"].mean() * 100, 2),
         "recall_std":  round(df_folds["recall"].std() * 100, 2),
 
-        "f1_mean":  round(df_folds["f1"].mean() * 100, 2),
-        "f1_std":  round(df_folds["f1"].std() * 100, 2),
+        "roc_auc_mean":  round(df_folds["roc_auc"].mean() * 100, 2),
+        "roc_auc_std":  round(df_folds["roc_auc"].std() * 100, 2),
 
-        "auc_mean":  round(df_folds["auc"].mean() * 100, 2),
-        "auc_std":  round(df_folds["auc"].std() * 100, 2),
+        "pr_auc_mean": round(df_folds['pr_auc'].mean() * 100, 2),
+        "pr_auc_std": round(df_folds['pr_auc'].std() * 100, 2),
 
         "best_epoch_mean":  round(df_folds["epoch"].mean(), 2),
         "best_epoch_median":  round(df_folds["epoch"].median(), 2),
@@ -92,11 +95,12 @@ def save_holdout_result(
     result.update(asdict(config))
 
     result.update({
+        "f1": round(model_result['f1'] * 100, 2),
         "accuracy": round(model_result['accuracy'] * 100, 2),
         "precision": round(model_result['precision'] * 100, 2),
         "recall": round(model_result['recall'] * 100, 2),
-        "f1": round(model_result['f1'] * 100, 2),
-        "auc": round(model_result['auc'] * 100, 2),
+        "roc_auc": round(model_result['roc_auc'] * 100, 2),
+        "pr_auc": round(model_result['pr_auc'] * 100, 2),
         "best_epoch": round(model_result["epoch"], 2),
     })
 
@@ -136,11 +140,12 @@ def save_training_result(
     result.update(asdict(config))
 
     result.update({
+        "f1": round(model_result['f1'] * 100, 2),
         "accuracy": round(model_result['accuracy'] * 100, 2),
         "precision": round(model_result['precision'] * 100, 2),
         "recall": round(model_result['recall'] * 100, 2),
-        "f1": round(model_result['f1'] * 100, 2),
-        "auc": round(model_result['auc'] * 100, 2),
+        "roc_auc": round(model_result['roc_auc'] * 100, 2),
+        "pr_auc": round(model_result['pr_auc'] * 100, 2),
     })
 
     df_result = pd.DataFrame([result])
@@ -152,3 +157,4 @@ def save_training_result(
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")
     return df_result
+    

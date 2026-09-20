@@ -9,7 +9,7 @@ from train import train_one_epoch, validate_model
 
 def train_validate_model(
     train_dataset,
-    teste_dataset,
+    test_dataset,
     config: TrainingConfig,
     filename=None
 ):
@@ -22,9 +22,9 @@ def train_validate_model(
         num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
     )
 
-    teste_dataset.transform = transformations["val"]
+    test_dataset.transform = transformations["val"]
     test_loader = DataLoader(
-        teste_dataset, batch_size=config.batch_size, shuffle=False,
+        test_dataset, batch_size=config.batch_size, shuffle=False,
         num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
     )
 
