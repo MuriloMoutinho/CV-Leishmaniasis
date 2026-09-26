@@ -180,6 +180,7 @@ def save_cross_dataset_result(
         "trained_on": trained_on,
         "tested_on": tested_on,
         "model_name": config.model_name,
+        "fine_tuning": config.fine_tuning,
         "augmentation_level": config.augmentation_level,
     }
 

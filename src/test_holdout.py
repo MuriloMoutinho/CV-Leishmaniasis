@@ -5,7 +5,7 @@ import torchvision
 
 from training_config import TrainingConfig, HoldoutConfig
 from data import save_holdout_result
-from train import train_validate_holdout
+from training import train_validate_holdout
 
 DATASET_ROOT = Path("../datasets-folds")
 
@@ -25,9 +25,6 @@ holdout_config = HoldoutConfig(
     patience_early_stopping=10,
     metric_to_monitor="f1",
 )
-
-#estimativa do gradiente mais "ruidosa" para batchs menores. Batchs maiores tras uma média melhor, mas pode piorar generalização
-#verificar linear scaling rule
 
 configs = [
     ("DLB", TrainingConfig(

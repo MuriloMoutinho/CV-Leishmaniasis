@@ -6,7 +6,7 @@ import torchvision
 
 from training_config import KFoldConfig, TrainingConfig
 from data import save_kfold_result
-from train import train_validate_kfold
+from training import train_validate_kfold
 
 DATASET_ROOT = Path("../datasets-folds")
 
@@ -26,7 +26,6 @@ kfold_config = KFoldConfig(
     patience_early_stopping=10,
     metric_to_monitor="f1",
 )
-
 
 configs = [
     ("DLB", TrainingConfig(model_name="resnet50", fine_tuning="last_block", dropout=0,

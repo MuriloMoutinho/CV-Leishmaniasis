@@ -1,17 +1,12 @@
 from PIL import ImageOps
 from torchvision import transforms
 
-def create_transforms(image_size, pad, compose=None):
+def create_transforms(image_size, compose=None):
     if compose is None:
         compose = []
 
-    pad_transform = []
-    if pad is True:
-        pad_transform = [transforms.Lambda(lambda img: pad_to_square(img, image_size))]
-
     return transforms.Compose([
-        transforms.Resize(image_size),
-        *pad_transform,
+        *get_resize_transform(image_size, False),
 
         *compose,
 
@@ -22,10 +17,16 @@ def create_transforms(image_size, pad, compose=None):
         )
     ])
 
+def get_resize_transform(image_size, padding):
+    if padding is True:
+        return [transforms.Lambda(lambda img: pad_to_square(img, image_size))]
+    else:
+        return [transforms.Resize(image_size)]
+
 def pad_to_square(img, image_size):
     return ImageOps.pad(
         img,
-        image_size,
+        image_size[::-1],
         color=(255, 255, 255),
         centering=(0.5, 0.5)
     )

@@ -2,9 +2,9 @@ from torchvision import transforms
 from augmentation.transforms_utils import create_transforms
 
 
-def strong_augmentation(image_size, pad=False):
+def strong_augmentation(image_size):
     return {
-        'train': create_transforms(image_size, pad, [
+        'train': create_transforms(image_size, [
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
             transforms.RandomApply([transforms.RandomRotation((180, 180))], p=0.5),
@@ -20,5 +20,5 @@ def strong_augmentation(image_size, pad=False):
 
             transforms.GaussianBlur(kernel_size=9, sigma=(0.1, 2.5)),
         ]),
-        'val': create_transforms(image_size, pad)
+        'val': create_transforms(image_size)
     }

@@ -1,21 +1,24 @@
 from pathlib import Path
 
 import torch, time
-from torch.utils.data import DataLoader
+
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
 from training_config import TrainingConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from train import train_one_epoch
+from training import train_one_epoch, validate_model
 
-def train_model(
+def train_validate_model(
     train_dataset,
-    config: TrainingConfig,
-    filename=None
+    test_dataset,
+    config: TrainingConfig
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transformations = create_augmentation(config.augmentation_level)
     train_dataset.transform = transformations["train"]
     train_loader = create_dataloader(train_dataset, config.batch_size, True)
+
+    test_dataset.transform = transformations["val"]
+    test_loader = create_dataloader(test_dataset, config.batch_size, False)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
 
@@ -42,12 +45,10 @@ def train_model(
         end_epoch = time.time()
         print(f"Tempo época: {end_epoch - start_epoch:.2f}s")
 
-    if filename is not None:
-        path = Path(filename)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(model.state_dict(), filename)
-
     end = time.time()
     print(f"Tempo final: {end - start:.2f}s")
 
-    return model
+    val_metrics = validate_model(model, test_loader, loss_function, device)
+    val_metrics['time'] = end - start
+
+    return val_metrics

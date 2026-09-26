@@ -9,7 +9,7 @@ import torchvision
 from handler.training_factorys import create_augmentation, create_binary_model, create_loss_function
 from training_config import TrainingConfig, create_dataloader
 from data import save_cross_dataset_result
-from train import validate_model, train_model
+from training import validate_model, train_model
 
 DATASET_ROOT = Path("../datasets-cross")
 
@@ -40,17 +40,17 @@ def load_trained_model(config: TrainingConfig, path: Path, device):
 
 
 resnet = TrainingConfig(model_name="resnet50", fine_tuning=None, dropout=0.0,
-                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.003,
-                           weight_decay=0.01, batch_size=16, epochs=15, scheduler_name="warmup+cosine",
-                           augmentation_level="strong")
+                            loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.003,
+                            weight_decay=0.01, batch_size=16, epochs=15, scheduler_name="warmup+cosine",
+                            augmentation_level="strong")
 denset = TrainingConfig(model_name="densenet121", fine_tuning=None, dropout=0.0,
                             loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
-                             weight_decay=0.01, batch_size=16, epochs=22, scheduler_name="warmup+cosine",
-                             augmentation_level="strong")
+                            weight_decay=0.01, batch_size=16, epochs=22, scheduler_name="warmup+cosine",
+                            augmentation_level="strong")
 efficientnet = TrainingConfig(model_name="efficientnetb0", fine_tuning=None, dropout=0.0,
-                                 loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
-                                 weight_decay=0.01, batch_size=16, epochs=21, scheduler_name="warmup+cosine",
-                                 augmentation_level="strong")
+                            loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
+                            weight_decay=0.01, batch_size=16, epochs=21, scheduler_name="warmup+cosine",
+                            augmentation_level="strong")
 
 configs = [
     ("DLB", "AIR_LEISH", replace(resnet, epochs=7, augmentation_level="strong")),
