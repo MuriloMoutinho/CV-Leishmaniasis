@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime
 
-from config import TrainingConfig, KFoldConfig, HoldoutConfig
+from training_config import TrainingConfig, KFoldConfig, HoldoutConfig
 
 
 def save_kfold_result(
@@ -157,4 +157,47 @@ def save_training_result(
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")
     return df_result
-    
+
+
+def save_cross_dataset_result(
+    model_result,
+    trained_on: str,
+    tested_on: str,
+    config: TrainingConfig,
+    filename="cross_dataset_results.csv"
+):
+    if os.path.exists(filename):
+        df_old = pd.read_csv(filename)
+        experiment_id = len(df_old) + 1
+    else:
+        df_old = pd.DataFrame()
+        experiment_id = 1
+
+    result = {
+        "experiment_id": experiment_id,
+        "time": round(model_result.get('time', 0) / 60, 2),
+        "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "trained_on": trained_on,
+        "tested_on": tested_on,
+        "model_name": config.model_name,
+        "augmentation_level": config.augmentation_level,
+    }
+
+    result.update({
+        "f1": round(model_result['f1'] * 100, 2),
+        "accuracy": round(model_result['accuracy'] * 100, 2),
+        "precision": round(model_result['precision'] * 100, 2),
+        "recall": round(model_result['recall'] * 100, 2),
+        "roc_auc": round(model_result['roc_auc'] * 100, 2),
+        "pr_auc": round(model_result['pr_auc'] * 100, 2),
+    })
+
+    df_result = pd.DataFrame([result])
+    df_result = pd.concat([df_old, df_result], ignore_index=True)
+
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    df_result.to_csv(filename, index=False)
+    print(f"\nExperimento {experiment_id} salvo ({trained_on} -> {tested_on})")
+    return df_result

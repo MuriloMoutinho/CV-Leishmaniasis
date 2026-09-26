@@ -3,11 +3,11 @@ from pathlib import Path
 
 import torchvision
 
-from config import TrainingConfig
+from training_config import TrainingConfig
 from data import save_training_result
 from train import train_validate_model
 
-DATASET_ROOT = Path("../datasets")
+DATASET_ROOT = Path("../datasets-folds")
 
 DATASETS = {
     "AIR_LEISH": DATASET_ROOT / "AIR_LEISH",
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             train_dataset,
             test_dataset,
             config,
-            f"experiments/models/{dataset_name}_{config.model_name}_{config.augmentation_level}.pth"
+            f"experiments/models/holdout/{dataset_name}_{config.model_name}_{config.augmentation_level}.pth"
         )
 
         torch.cuda.empty_cache()
