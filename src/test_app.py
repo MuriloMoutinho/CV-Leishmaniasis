@@ -16,8 +16,9 @@ checkpoint_path = PROJECT_PATH / "experiments" / "models" / "total" / "oficial" 
 model = create_binary_model("resnet50")
 model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
+visual_aug_test = "strong"
 test_transform = create_augmentation("weak")["val"]
-strong_transform = create_augmentation("strong")["train"]
+strong_transform = create_augmentation(visual_aug_test)["train"]
 
 MEAN = numpy.array([0.485, 0.456, 0.406])
 STD = numpy.array([0.229, 0.224, 0.225])
@@ -99,7 +100,7 @@ if st.sidebar.button("Enviar"):
         result_label = "Negativo" if prediction == 0 else "Positivo"
         st.success(f"{result_label} (prob. positivo: {prob:.2%})")
 
-        st.subheader("Teste Augmentation")
+        st.subheader(f"Teste Augmentation {visual_aug_test}")
         st.image(
             apply_strong_augmentation(u_img),
             caption="Imagem após Augmentation",

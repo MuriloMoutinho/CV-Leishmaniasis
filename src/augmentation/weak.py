@@ -1,22 +1,8 @@
-from torchvision import transforms
+from augmentation.transforms_utils import create_transforms
 
-def weak_augmentation(image_size):
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
 
+def weak_augmentation(image_size, pad=False):
     return {
-        'train': transforms.Compose([
-            transforms.Resize(image_size),
-
-            transforms.ToTensor(),
-            normalize
-        ]),
-        'val': transforms.Compose([
-            transforms.Resize(image_size),
-
-            transforms.ToTensor(),
-            normalize
-        ])
+        'train': create_transforms(image_size, pad),
+        'val': create_transforms(image_size, pad)
     }

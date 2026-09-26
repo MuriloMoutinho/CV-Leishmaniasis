@@ -1,25 +1,12 @@
 from torchvision import transforms
 
-def medium_augmentation(image_size):
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
+from augmentation.transforms_utils import create_transforms
 
+def medium_augmentation(image_size, pad=False):
     return {
-        'train': transforms.Compose([
-            transforms.Resize(image_size),
-
+        'train': create_transforms(image_size, pad, [
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
-
-            transforms.ToTensor(),
-            normalize
         ]),
-        'val': transforms.Compose([
-            transforms.Resize(image_size),
-
-            transforms.ToTensor(),
-            normalize
-        ])
+        'val': create_transforms(image_size, pad)
     }

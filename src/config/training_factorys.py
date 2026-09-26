@@ -130,12 +130,13 @@ def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
 
 def create_augmentation(augmentation_level_name):
     image_size = (576, 768)
+    pad = False
 
     if augmentation_level_name == "weak":
-        return weak_augmentation(image_size)
+        return weak_augmentation(image_size, pad)
     elif augmentation_level_name == "medium":
-        return medium_augmentation(image_size)
+        return medium_augmentation(image_size, pad)
     elif augmentation_level_name == "strong":
-        return strong_augmentation(image_size)
+        return strong_augmentation(image_size, pad)
 
     raise TypeError("Augmentation incorreto")
