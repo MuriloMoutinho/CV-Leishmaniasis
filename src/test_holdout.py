@@ -3,11 +3,11 @@ from pathlib import Path
 
 import torchvision
 
-from config import TrainingConfig, HoldoutConfig
+from training_config import TrainingConfig, HoldoutConfig
 from data import save_holdout_result
 from train import train_validate_holdout
 
-DATASET_ROOT = Path("../datasets")
+DATASET_ROOT = Path("../datasets-folds")
 
 DATASETS = {
     "AIR_LEISH": DATASET_ROOT / "AIR_LEISH" / "train",

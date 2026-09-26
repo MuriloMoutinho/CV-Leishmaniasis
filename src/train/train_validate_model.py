@@ -3,8 +3,8 @@ from pathlib import Path
 import torch, time
 from torch.utils.data import DataLoader
 
-from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, create_scheduler, \
-    create_augmentation, get_optimizer_param_groups, compute_pos_weight
+from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
+from training_config import TrainingConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
 from train import train_one_epoch, validate_model
 
 def train_validate_model(
@@ -17,16 +17,10 @@ def train_validate_model(
 
     transformations = create_augmentation(config.augmentation_level)
     train_dataset.transform = transformations["train"]
-    train_loader = DataLoader(
-        train_dataset, batch_size=config.batch_size, shuffle=True,
-        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
-    )
+    train_loader = create_dataloader(train_dataset, config.batch_size, True)
 
     test_dataset.transform = transformations["val"]
-    test_loader = DataLoader(
-        test_dataset, batch_size=config.batch_size, shuffle=False,
-        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
-    )
+    test_loader = create_dataloader(test_dataset, config.batch_size, False)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
 

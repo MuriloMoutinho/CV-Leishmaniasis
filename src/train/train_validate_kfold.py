@@ -2,8 +2,8 @@ import torch, time, numpy, copy
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Subset
 
-from config import TrainingConfig, KFoldConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler, create_augmentation, get_optimizer_param_groups, compute_pos_weight
+from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
+from training_config import TrainingConfig, KFoldConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
 from train import train_one_epoch, validate_model
 
 
@@ -29,7 +29,7 @@ def train_validate_kfold(
         print(f"FOLD {fold}/{kfold_config.n_splits}")
         print("=" * 60)
 
-        train_loader, val_loader, pos_weight = create_data_loaders(dataset, transformations, config, train_idx, val_idx)
+        train_loader, val_loader, pos_weight = create_data_loaders_kfold(dataset, transformations, config, train_idx, val_idx)
 
         fold_model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
 
@@ -69,22 +69,16 @@ def train_validate_kfold(
 
     return fold_results, fold_histories
 
-def create_data_loaders(dataset, transformations, config, train_idx, val_idx):
+def create_data_loaders_kfold(dataset, transformations, config, train_idx, val_idx):
     train_dataset = copy.copy(dataset)
     train_dataset.transform = transformations["train"]
     train_fold = Subset(train_dataset, train_idx)
-    train_loader = DataLoader(
-        train_fold, batch_size=config.batch_size, shuffle=True,
-        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
-    )
+    train_loader = create_dataloader(train_fold, config.batch_size, True)
 
     val_dataset = copy.copy(dataset)
     val_dataset.transform = transformations["val"]
     val_fold = Subset(val_dataset, val_idx)
-    val_loader = DataLoader(
-        val_fold, batch_size=config.batch_size, shuffle=False,
-        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
-    )
+    val_loader = create_dataloader(val_fold, config.batch_size, False)
 
     pos_weight = compute_pos_weight(dataset, train_idx)
 

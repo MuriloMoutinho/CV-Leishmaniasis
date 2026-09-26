@@ -1,9 +1,9 @@
 import torch, time, copy
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, Subset, random_split
+from torch.utils.data import DataLoader, Subset
 
-from config import TrainingConfig, create_binary_model, create_optimizer, create_loss_function, \
-    create_scheduler, HoldoutConfig, create_augmentation, get_optimizer_param_groups, compute_pos_weight
+from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
+from training_config import TrainingConfig, HoldoutConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
 from train import train_one_epoch, validate_model
 
 
@@ -15,7 +15,7 @@ def train_validate_holdout(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transformations = create_augmentation(config.augmentation_level)
-    train_loader, val_loader, pos_weight = create_data_loaders(dataset, transformations, config, holdout_config)
+    train_loader, val_loader, pos_weight = create_data_loaders_holdout(dataset, transformations, config, holdout_config)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
 
@@ -51,7 +51,7 @@ def train_validate_holdout(
 
     return best_metrics_epoch, history
 
-def create_data_loaders(dataset, transformations, config, holdout_config):
+def create_data_loaders_holdout(dataset, transformations, config, holdout_config):
     labels = [label for _, label in dataset.samples]
     indices = list(range(len(dataset)))
 
@@ -65,18 +65,12 @@ def create_data_loaders(dataset, transformations, config, holdout_config):
     train_dataset = copy.copy(dataset)
     train_dataset.transform = transformations["train"]
     train_fold = Subset(train_dataset, train_indices)
-    train_loader = DataLoader(
-        train_fold, batch_size=config.batch_size, shuffle=True,
-        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
-    )
+    train_loader = create_dataloader(train_fold, config.batch_size, True)
 
     val_dataset = copy.copy(dataset)
     val_dataset.transform = transformations["val"]
     val_fold = Subset(val_dataset, val_indices)
-    val_loader = DataLoader(
-        val_fold, batch_size=config.batch_size, shuffle=False,
-        num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=2
-    )
+    val_loader = create_dataloader(val_fold, config.batch_size, False)
 
     pos_weight = compute_pos_weight(dataset, train_indices)
 

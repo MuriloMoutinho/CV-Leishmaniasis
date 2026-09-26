@@ -4,11 +4,11 @@ from pathlib import Path
 import torch.cuda
 import torchvision
 
-from config import KFoldConfig, TrainingConfig
+from training_config import KFoldConfig, TrainingConfig
 from data import save_kfold_result
 from train import train_validate_kfold
 
-DATASET_ROOT = Path("../datasets")
+DATASET_ROOT = Path("../datasets-folds")
 
 DATASETS = {
     "AIR_LEISH": DATASET_ROOT / "AIR_LEISH" / "train",
@@ -23,12 +23,10 @@ def load_dataset(name: str):
 kfold_config = KFoldConfig(
     n_splits=5,
     val_split_seed=42,
-    patience_early_stopping=8,
+    patience_early_stopping=10,
     metric_to_monitor="f1",
 )
 
-#estimativa do gradiente mais "ruidosa" para batchs menores. Batchs maiores tras uma média melhor, mas pode piorar generalização
-#verificar linear scaling rule
 
 configs = [
     ("DLB", TrainingConfig(model_name="resnet50", fine_tuning="last_block", dropout=0,
