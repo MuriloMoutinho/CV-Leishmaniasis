@@ -21,12 +21,12 @@ def get_resize_transform(image_size, padding):
     if padding is True:
         return [transforms.Lambda(lambda img: pad_to_square(img, image_size))]
     else:
-        return [transforms.Resize(image_size)]
+        return [transforms.Resize(image_size[::-1])]
 
 def pad_to_square(img, image_size):
     return ImageOps.pad(
         img,
-        image_size[::-1],
+        image_size,
         color=(255, 255, 255),
         centering=(0.5, 0.5)
     )

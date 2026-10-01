@@ -14,7 +14,7 @@ def train_validate_holdout(
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    transformations = create_augmentation(config.augmentation_level)
+    transformations = create_augmentation(config.augmentation_level, config.resolution)
     train_loader, val_loader, pos_weight = create_data_loaders_holdout(dataset, transformations, config, holdout_config)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)

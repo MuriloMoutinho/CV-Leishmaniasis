@@ -34,9 +34,7 @@ def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
 
     raise TypeError("Scheduler incorreto")
 
-def create_augmentation(augmentation_level_name):
-    image_size = (576, 768)
-
+def create_augmentation(augmentation_level_name, image_size):
     if augmentation_level_name == "weak":
         return weak_augmentation(image_size)
     elif augmentation_level_name == "medium":

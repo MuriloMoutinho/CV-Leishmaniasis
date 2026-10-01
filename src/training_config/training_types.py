@@ -10,6 +10,7 @@ class TrainingConfig:
     weight_decay: float
     batch_size: int
     epochs: int
+    resolution: tuple[int, int] = (768, 576)
     fine_tuning: str | None = None
     augmentation_level: str = 'medium'
     scheduler_name: str | None = None

@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Subset
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
 from training_config import TrainingConfig, KFoldConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from train import train_one_epoch, validate_model
+from training import train_one_epoch, validate_model
 
 
 def train_validate_kfold(
@@ -21,7 +21,7 @@ def train_validate_kfold(
     fold_results = []
     fold_histories = []
 
-    transformations = create_augmentation(config.augmentation_level)
+    transformations = create_augmentation(config.augmentation_level, config.resolution)
 
     for fold, (train_idx, val_idx) in enumerate(skf.split(labels_arr, labels), start=1):
 
