@@ -6,6 +6,7 @@ __pycache__/
 
 .idea/
 datasets-cross/
+datasets-crosstrain/
 datasets-folds/
 src/experiments
 

@@ -13,7 +13,7 @@ def train_validate_model(
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    transformations = create_augmentation(config.augmentation_level)
+    transformations = create_augmentation(config.augmentation_level, config.resolution)
     train_dataset.transform = transformations["train"]
     train_loader = create_dataloader(train_dataset, config.batch_size, True)
 

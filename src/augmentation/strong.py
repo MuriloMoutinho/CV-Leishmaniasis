@@ -7,18 +7,21 @@ def strong_augmentation(image_size):
         'train': create_transforms(image_size, [
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
-            transforms.RandomApply([transforms.RandomRotation((180, 180))], p=0.5),
 
-            transforms.ColorJitter(
-                brightness=0.3,
-                contrast=0.3,
-                saturation=0.25,
-                hue=0.05
-            ),
-            transforms.RandomAutocontrast(p=0.3),
-            transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.3),
+            transforms.RandomAffine(degrees=3, scale=(0.97, 1.03)),
 
-            transforms.GaussianBlur(kernel_size=9, sigma=(0.1, 2.5)),
+            transforms.RandomApply([
+                transforms.ColorJitter(
+                    brightness=0.18,
+                    contrast=0.18,
+                    saturation=0.05,
+                    hue=0.02
+                )
+            ], p=0.5),
+
+            transforms.RandomApply([
+                transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.1))
+            ], p=0.2)
         ]),
         'val': create_transforms(image_size)
     }

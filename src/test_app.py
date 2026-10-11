@@ -17,8 +17,10 @@ model = create_binary_model("resnet50")
 model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
 visual_aug_test = "strong"
-test_transform = create_augmentation("weak")["val"]
-strong_transform = create_augmentation(visual_aug_test)["train"]
+image_size = (576, 432)
+
+test_transform = create_augmentation(visual_aug_test, image_size)["val"]
+strong_transform = create_augmentation(visual_aug_test, image_size)["train"]
 
 MEAN = numpy.array([0.485, 0.456, 0.406])
 STD = numpy.array([0.229, 0.224, 0.225])
