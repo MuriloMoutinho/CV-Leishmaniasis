@@ -3,9 +3,8 @@ from pathlib import Path
 import gc, torch, optuna, torchvision, torch.cuda, ast
 import pandas as pd
 from dataclasses import replace
-from training_config import KFoldConfig, TrainingConfig
 from data import save_kfold_result
-from training import train_validate_kfold
+from training import train_validate_kfold, set_seed, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
 
@@ -16,7 +15,9 @@ DATASETS = {
 }
 
 N_TRIALS = 5
-RANDOM_SEED = 42
+BATCH_SIZE = 24
+
+EXPERIMENTS_ROOT = "experiments/optuna"
 
 def load_dataset(name: str):
     root = DATASETS[name]
@@ -26,15 +27,15 @@ kfold_config = KFoldConfig(
     n_splits=3,
     val_split_seed=42,
     patience_early_stopping=10,
-    metric_to_monitor="f1",
+    metric_to_monitor="f1_macro",
 )
 
 SEARCH_SPACE = {
     "learning_rate": [1e-5, 3e-5, 5e-5, 1e-4, 2e-4, 3e-4, 5e-4, 7e-4, 1e-3, 2e-3, 3e-3],
     "weight_decay": [0.0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
     "dropout": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-    "resolution": [(224, 168), (384, 288), (576, 432), (768, 576)],
-    "fine_tuning": [None, "last_block", "last_two_blocks"]
+    "resolution": [(224, 168), (384, 288), (576, 432)], #(768, 576)
+    "fine_tuning": [None, "last_block"] #"last_two_blocks"
 }
 
 MODEL_NAME = [
@@ -43,8 +44,8 @@ MODEL_NAME = [
     "efficientnetb0",
 ]
 
-default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw",
-                                epochs=50, scheduler_name=None, augmentation_level="weak",
+default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", training_seed=42,
+                                epochs=100, scheduler_name=None, augmentation_level="weak",
                                 model_name="", dropout=0, learning_rate=0, weight_decay=0, batch_size=0)
 
 def suggest_config(trial, model_name):
@@ -65,7 +66,7 @@ def suggest_config(trial, model_name):
         learning_rate=learning_rate,
         weight_decay=weight_decay,
         dropout=dropout,
-        batch_size=16,
+        batch_size=BATCH_SIZE,
         resolution=resolution,
     )
 
@@ -74,6 +75,7 @@ def suggest_config(trial, model_name):
 def evaluate_config_on_datasets(config):
     dataset_scores = {}
 
+    set_seed()
     for dataset_name in DATASETS.keys():
         dataset = load_dataset(dataset_name)
 
@@ -88,11 +90,11 @@ def evaluate_config_on_datasets(config):
             config=config,
             dataset_name=dataset_name,
             kfold_config=kfold_config,
-            filename="experiments/optuna_kfold.csv"
+            filename=f"{EXPERIMENTS_ROOT}/optuna_kfold.csv"
         )
 
         df_folds = pd.DataFrame(fold_results)
-        dataset_scores[dataset_name] = df_folds["f1"].mean()
+        dataset_scores[dataset_name] = df_folds[kfold_config.metric_to_monitor].mean()
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -121,7 +123,7 @@ def objective(trial, model_name):
     global_score, dataset_scores = evaluate_config_on_datasets(config=config)
 
     for dataset_name, score in dataset_scores.items():
-        trial.set_user_attr(f"f1_{dataset_name}", score)
+        trial.set_user_attr(f"{kfold_config.metric_to_monitor}_{dataset_name}", score)
 
     trial.set_user_attr("model_name", model_name)
     trial.set_user_attr("batch_size", config.batch_size)
@@ -134,32 +136,25 @@ def objective(trial, model_name):
     return global_score
 
 def save_optuna_results(study, model_name):
-    os.makedirs("experiments", exist_ok=True)
-
     df = study.trials_dataframe(attrs=("number", "value", "params", "user_attrs", "state"))
     df = df.sort_values("value", ascending=False).reset_index(drop=True)
 
-    path = f"experiments/optuna_{model_name}.csv"
+    path = f"{EXPERIMENTS_ROOT}/optuna_{model_name}.csv"
     df.to_csv(path, index=False)
 
     return df
-
 
 def run_optuna(model_name, trials):
     print("\n" + "=" * 70)
     print(f"OPTUNA: {model_name}")
     print("=" * 70)
 
-    study_name = f"{model_name}"
-
-    os.makedirs("experiments", exist_ok=True)
+    os.makedirs(EXPERIMENTS_ROOT, exist_ok=True)
     study = optuna.create_study(
-        study_name=study_name,
+        study_name=model_name,
         direction="maximize",
-
-        storage="sqlite:///experiments/optuna.db",
+        storage=f"sqlite:///{EXPERIMENTS_ROOT}/optuna.db",
         load_if_exists=True,
-
         sampler=optuna.samplers.TPESampler(seed=RANDOM_SEED),
     )
 
@@ -181,7 +176,7 @@ def run_optuna(model_name, trials):
     print("=" * 70)
 
     for dataset_name in DATASETS.keys():
-        value = study.best_trial.user_attrs.get(f"f1_{dataset_name}")
+        value = study.best_trial.user_attrs.get(f"{kfold_config.metric_to_monitor}_{dataset_name}")
         print(f"  {dataset_name}: {value:.4f}")
 
     save_optuna_results(study=study, model_name=model_name)

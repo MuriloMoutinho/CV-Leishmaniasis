@@ -1,10 +1,10 @@
 import torch, time, numpy, copy
 from sklearn.model_selection import StratifiedKFold
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import Subset
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
-from training_config import TrainingConfig, KFoldConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from training import train_one_epoch, validate_model
+from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
+from training import train_one_epoch, validate_model, TrainingConfig, KFoldConfig
 
 
 def train_validate_kfold(
@@ -63,8 +63,6 @@ def train_validate_kfold(
         print(f"Precision: {best_metrics_epoch['precision']:.4f}")
         print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
         print(f"F1       : {best_metrics_epoch['f1']:.4f}")
-        print(f"ROC AUC  : {best_metrics_epoch['roc_auc']:.4f}")
-        print(f"PR AUC   : {best_metrics_epoch['pr_auc']:.4f}")
         print(f"Tempo fold: {best_metrics_epoch['time']:.2f}s")
 
     return fold_results, fold_histories
@@ -116,15 +114,24 @@ def train_and_validate_fold(
 
         history.append({
             "epoch": epoch + 1,
-            "train_loss": train_metrics['loss'],
-            "train_accuracy": train_metrics['accuracy'],
-            "val_loss": val_metrics['loss'],
-            "val_accuracy": val_metrics['accuracy'],
-            "val_precision": val_metrics['precision'],
-            "val_recall": val_metrics['recall'],
-            "val_f1": val_metrics['f1'],
-            "val_roc_auc": val_metrics['roc_auc'],
-            "val_pr_auc": val_metrics['pr_auc']
+            "train_loss": train_metrics["loss"],
+            "train_accuracy": train_metrics["accuracy"],
+            "val_loss": val_metrics["loss"],
+            "val_accuracy": val_metrics["accuracy"],
+            "val_balanced_accuracy": val_metrics["balanced_accuracy"],
+            "val_mcc": val_metrics["mcc"],
+            "val_precision": val_metrics["precision"],
+            "val_recall": val_metrics["recall"],
+            "val_f1": val_metrics["f1"],
+            "val_f1_class0": val_metrics["f1_class0"],
+            "val_f1_macro": val_metrics["f1_macro"],
+            "val_roc_auc": val_metrics["roc_auc"],
+            "val_pr_auc_class1": val_metrics["pr_auc_class1"],
+            "val_pr_auc_class0": val_metrics["pr_auc_class0"],
+            "val_tn": val_metrics["tn"],
+            "val_fp": val_metrics["fp"],
+            "val_fn": val_metrics["fn"],
+            "val_tp": val_metrics["tp"],
         })
 
         print(

@@ -1,10 +1,8 @@
-from pathlib import Path
-
 import torch, time
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
-from training_config import TrainingConfig, get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from training import train_one_epoch, validate_model
+from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
+from training import train_one_epoch, validate_model, TrainingConfig
 
 def train_validate_model(
     train_dataset,

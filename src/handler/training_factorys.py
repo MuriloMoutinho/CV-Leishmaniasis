@@ -1,7 +1,7 @@
 import torch
 
 from augmentation import weak_augmentation, medium_augmentation, strong_augmentation
-from training_config.scheduler import get_warmup_cosine
+from training_config import get_warmup_cosine
 from models import create_binary_resnet, create_binary_densenet, create_binary_efficientnet
 
 def create_optimizer(optimizer_name, param_group):

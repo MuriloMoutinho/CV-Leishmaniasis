@@ -7,9 +7,9 @@ import torch
 import torchvision
 
 from handler.training_factorys import create_augmentation, create_binary_model, create_loss_function
-from training_config import TrainingConfig, create_dataloader
 from data import save_cross_dataset_result
-from training import validate_model, train_model
+from training import validate_model, train_model, set_seed, TrainingConfig
+from training_config import create_dataloader
 
 DATASET_ROOT = Path("../datasets-cross")
 
@@ -19,19 +19,19 @@ DATASETS = {
     "DLB": DATASET_ROOT / "DLB",
 }
 
-test_transform = create_augmentation("weak")["val"]
+test_transform = create_augmentation("weak", (768, 576))["val"]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_train_dataset(dataset_name: str):
-    root = DATASETS[dataset_name]
+    root = DATASET_ROOT / dataset_name
     return torchvision.datasets.ImageFolder(root=str(root))
 
 def load_test_loader(dataset_name: str, batch_size: int = 16):
-    root = DATASETS[dataset_name]
+    root = DATASET_ROOT / dataset_name
     test_dataset = torchvision.datasets.ImageFolder(root=str(root), transform=test_transform)
     return create_dataloader(test_dataset, batch_size, False)
 
-def load_trained_model(config: TrainingConfig, path: Path, device):
+def load_trained_model(config: TrainingConfig, checkpoint_path: Path, device):
     if checkpoint_path.is_file():
         model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -39,31 +39,20 @@ def load_trained_model(config: TrainingConfig, path: Path, device):
     return None
 
 
-resnet = TrainingConfig(model_name="resnet50", fine_tuning=None, dropout=0.0,
-                            loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.003,
-                            weight_decay=0.01, batch_size=16, epochs=15, scheduler_name="warmup+cosine",
-                            augmentation_level="strong")
-denset = TrainingConfig(model_name="densenet121", fine_tuning=None, dropout=0.0,
-                            loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
-                            weight_decay=0.01, batch_size=16, epochs=22, scheduler_name="warmup+cosine",
-                            augmentation_level="strong")
-efficientnet = TrainingConfig(model_name="efficientnetb0", fine_tuning=None, dropout=0.0,
-                            loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.005,
-                            weight_decay=0.01, batch_size=16, epochs=21, scheduler_name="warmup+cosine",
-                            augmentation_level="strong")
+default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
+                                batch_size=24, fine_tuning="last_block", resolution=(576, 432),
+                                epochs=0, augmentation_level="", model_name="", dropout=0, learning_rate=0, weight_decay=0)
+
+resnet50 = replace(default_config, model_name="resnet50", dropout=0.4, learning_rate=0.002, weight_decay=0.000001)
+densenet121 = replace(default_config, model_name="densenet121", dropout=0, learning_rate=0.002, weight_decay=0.001)
+efficientnetb0 = replace(default_config, model_name="efficientnetb0", dropout=0.2, learning_rate=0.003, weight_decay=0.0001)
 
 configs = [
-    ("DLB", "AIR_LEISH", replace(resnet, epochs=7, augmentation_level="strong")),
-    ("DLB", "DeepLeish", replace(resnet, epochs=7, augmentation_level="strong")),
 
-    ("DLB", "AIR_LEISH", replace(denset, epochs=6, augmentation_level="strong")),
-    ("DLB", "DeepLeish", replace(denset, epochs=6, augmentation_level="strong")),
-
-    ("DLB", "AIR_LEISH", replace(efficientnet, epochs=7, augmentation_level="strong")),
-    ("DLB", "DeepLeish", replace(efficientnet, epochs=7, augmentation_level="strong")),
 ]
 
 if __name__ == "__main__":
+    set_seed()
     for name_train_dataset, name_test_dataset, config in configs:
 
         print(f"\nTreinado em {name_train_dataset} | Testado em {name_test_dataset} | {config.model_name} | aug={config.augmentation_level} ")
@@ -94,5 +83,5 @@ if __name__ == "__main__":
             trained_on=name_train_dataset,
             tested_on=name_test_dataset,
             config=config,
-            filename="experiments/cross_dataset_results.csv",
+            filename="experiments/cross_dataset_results2.csv",
         )

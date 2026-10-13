@@ -1,11 +1,11 @@
-import os
+import os, numpy
 from dataclasses import asdict
 from pathlib import Path
 
 import pandas as pd
 from datetime import datetime
 
-from training_config import TrainingConfig, KFoldConfig, HoldoutConfig
+from training import TrainingConfig, KFoldConfig, HoldoutConfig
 
 
 def save_kfold_result(
@@ -15,14 +15,28 @@ def save_kfold_result(
     kfold_config: KFoldConfig,
     filename="kfold.csv"
 ):
-    df_folds = pd.DataFrame(fold_results)
-
     if os.path.exists(filename):
         df_old = pd.read_csv(filename)
         experiment_id = len(df_old) + 1
     else:
         df_old = pd.DataFrame()
         experiment_id = 1
+
+    experiment_dir = Path(filename).parent / "labels" / str(experiment_id)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+
+    for fold, fold_result in enumerate(fold_results, start=1):
+        numpy.savez(
+            experiment_dir / f"fold{fold}.npz",
+            labels=fold_result["labels"],
+            probabilities=fold_result["probabilities"],
+        )
+
+    scalar_results = [
+        {k: v for k, v in r.items() if k not in ("labels", "probabilities")}
+        for r in fold_results
+    ]
+    df_folds = pd.DataFrame(scalar_results)
 
     result = {
         "experiment_id": experiment_id,
@@ -33,28 +47,31 @@ def save_kfold_result(
 
     result.update(asdict(config))
 
+    percent_metrics = [
+        "f1", "f1_class0", "f1_macro", "f1_macro_tuned",
+        "accuracy", "balanced_accuracy",
+        "precision", "recall",
+        "roc_auc", "pr_auc_class1", "pr_auc_class0",
+    ]
+    for name in percent_metrics:
+        if name in df_folds.columns:
+            result[f"{name}_mean"] = round(df_folds[name].mean() * 100, 2)
+            result[f"{name}_std"] = round(df_folds[name].std() * 100, 2)
+
+    threshold_metrics = ["mcc"]
+    for name in threshold_metrics:
+        if name in df_folds.columns:
+            result[f"{name}_mean"] = round(df_folds[name].mean(), 4)
+            result[f"{name}_std"] = round(df_folds[name].std(), 4)
+
+    for name in ["tn", "fp", "fn", "tp"]:
+        if name in df_folds.columns:
+            result[f"{name}_sum"] = int(df_folds[name].sum())
+
     result.update({
-        "f1_mean":  round(df_folds["f1"].mean() * 100, 2),
-        "f1_std":  round(df_folds["f1"].std() * 100, 2),
-
-        "accuracy_mean":  round(df_folds["accuracy"].mean() * 100, 2),
-        "accuracy_std":  round(df_folds["accuracy"].std() * 100, 2),
-
-        "precision_mean":  round(df_folds["precision"].mean() * 100, 2),
-        "precision_std":  round(df_folds["precision"].std() * 100, 2),
-
-        "recall_mean":  round(df_folds["recall"].mean() * 100, 2),
-        "recall_std":  round(df_folds["recall"].std() * 100, 2),
-
-        "roc_auc_mean":  round(df_folds["roc_auc"].mean() * 100, 2),
-        "roc_auc_std":  round(df_folds["roc_auc"].std() * 100, 2),
-
-        "pr_auc_mean": round(df_folds['pr_auc'].mean() * 100, 2),
-        "pr_auc_std": round(df_folds['pr_auc'].std() * 100, 2),
-
-        "best_epoch_mean":  round(df_folds["epoch"].mean(), 2),
-        "best_epoch_median":  round(df_folds["epoch"].median(), 2),
-        "best_epoch_std":  round(df_folds["epoch"].std(), 2),
+        "best_epoch_mean": round(df_folds["epoch"].mean(), 2),
+        "best_epoch_median": round(df_folds["epoch"].median(), 2),
+        "best_epoch_std": round(df_folds["epoch"].std(), 2),
     })
 
     if kfold_config is not None:
@@ -68,8 +85,8 @@ def save_kfold_result(
 
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")
-    return df_result
 
+    return df_result
 
 def save_holdout_result(
     model_result,

@@ -2,10 +2,8 @@ import gc, torch
 from pathlib import Path
 
 import torchvision
-
-from training_config import TrainingConfig, HoldoutConfig
 from data import save_holdout_result
-from training import train_validate_holdout
+from training import train_validate_holdout, set_seed, HoldoutConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
 
@@ -27,22 +25,48 @@ holdout_config = HoldoutConfig(
 )
 
 configs = [
-    ("DLB", TrainingConfig(
-        model_name="resnet50",
-        fine_tuning="last_two_blocks",
-        dropout=0,
-        loss_name="cross_entropy",
-        optimizer_name="adamw",
-        learning_rate=0.0003,
-        weight_decay=0.01,
-        batch_size=16,
-        epochs=50,
-        scheduler_name="warmup+cosine",
-        augmentation_level="strong",
-    )),
+    ("DLB", TrainingConfig(model_name="resnet50", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+    ("DLB", TrainingConfig(model_name="densenet121", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+    ("DLB", TrainingConfig(model_name="efficientnetb0", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+
+    ("AIR_LEISH", TrainingConfig(model_name="resnet50", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+    ("AIR_LEISH", TrainingConfig(model_name="densenet121", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+    ("AIR_LEISH", TrainingConfig(model_name="efficientnetb0", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+
+    ("DeepLeish", TrainingConfig(model_name="resnet50", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+    ("DeepLeish", TrainingConfig(model_name="densenet121", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
+    ("DeepLeish", TrainingConfig(model_name="efficientnetb0", fine_tuning="last_two_blocks", dropout=0,
+                           loss_name="cross_entropy", optimizer_name="adamw", learning_rate=0.001,
+                           weight_decay=0.01, batch_size=16, epochs=50, scheduler_name=None,
+                           augmentation_level="weak")),
 ]
 
 if __name__ == "__main__":
+    set_seed()
     for dataset_name, config in configs:
         fold_results, fold_histories = train_validate_holdout(
             load_dataset(dataset_name),
