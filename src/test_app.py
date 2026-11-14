@@ -12,7 +12,8 @@ PROJECT_PATH = Path(__file__).resolve().parent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-checkpoint_path = PROJECT_PATH / "experiments" / "models" / "total" / "oficial" / "DLB_resnet50_strong.pth"
+checkpoint_path = (PROJECT_PATH / "experiments" / "average" / "results" / "cross" / "models"
+                   / "CROSS_DLB_resnet50_medium_42.pth")
 model = create_binary_model("resnet50")
 model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 

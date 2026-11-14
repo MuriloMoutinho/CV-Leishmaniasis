@@ -16,6 +16,7 @@ DATASETS = {
 
 N_TRIALS = 5
 BATCH_SIZE = 24
+RANDOM_SEED = 42
 
 EXPERIMENTS_ROOT = "experiments/optuna"
 
