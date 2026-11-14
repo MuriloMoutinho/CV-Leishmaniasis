@@ -2,13 +2,14 @@ import torch, time
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
 from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from training import train_one_epoch, validate_model, TrainingConfig
+from training import train_one_epoch, validate_model, set_seed, TrainingConfig
 
 def train_validate_model(
     train_dataset,
     test_dataset,
     config: TrainingConfig
 ):
+    set_seed(config.training_seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transformations = create_augmentation(config.augmentation_level, config.resolution)

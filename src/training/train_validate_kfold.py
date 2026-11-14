@@ -5,7 +5,7 @@ from torch.utils.data import Subset, ConcatDataset
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
 from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from training import train_one_epoch, validate_model, TrainingConfig, KFoldConfig
+from training import train_one_epoch, validate_model, set_seed, TrainingConfig, KFoldConfig
 
 
 def train_validate_kfold(
@@ -36,6 +36,8 @@ def train_validate_kfold(
         print("\n" + "=" * 60)
         print(f"FOLD {fold}/{kfold_config.n_splits}")
         print("=" * 60)
+
+        set_seed(config.training_seed)
 
         train_loader, val_loader, pos_weight = create_data_loaders_kfold(dataset, transformations, config, train_idx, val_idx)
 

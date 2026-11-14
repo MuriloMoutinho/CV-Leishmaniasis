@@ -21,67 +21,66 @@ def load_datasets(name: str):
     test_dataset = torchvision.datasets.ImageFolder(root=str(root / "test"))
     return train_dataset, test_dataset
 
-default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", resolution=(768, 576), batch_size=16,
-                                epochs=50, scheduler_name=None, augmentation_level="weak", fine_tuning="last_two_blocks",
-                                model_name="", dropout=0, learning_rate=0, weight_decay=0)
-
-resnet50 = replace(default_config, model_name="resnet50", dropout=0, learning_rate=0.002, weight_decay=1e-06)
-densenet121 = replace(default_config, model_name="densenet121", dropout=0, learning_rate=0.002, weight_decay=1e-06)
-efficientnetb0 = replace(default_config, model_name="efficientnetb0", dropout=0.5, learning_rate=0.002, weight_decay=0.01)
+default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
+                                batch_size=24, fine_tuning="last_block", resolution=(576, 432),
+                                epochs=0, augmentation_level="", model_name="", dropout=0, learning_rate=0, weight_decay=0)
 
 configs = [
-    #("DLB", replace(resnet50, augmentation_level="weak", epochs=5)),
-    #("AIR_LEISH", replace(resnet50, augmentation_level="weak", epochs=7)),
-    #("DeepLeish", replace(resnet50, augmentation_level="weak", epochs=6)),
+#("AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=9)),
+#("DLB", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.0007, weight_decay=1e-06, epochs=12)),
+#("DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=5)),
+#("AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+#("DLB", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.0007, weight_decay=1e-06, epochs=11)),
+#("DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=10)),
+#("AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=13)),
+#("DLB", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.0007, weight_decay=1e-06, epochs=16)),
+#("DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=13)),
 
-    #("DLB", replace(densenet121, augmentation_level="weak", epochs=8)),
-    #("AIR_LEISH", replace(densenet121, augmentation_level="weak", epochs=5)),
-    #("DeepLeish", replace(densenet121, augmentation_level="weak", epochs=8)),
+#("AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=6)),
+#("DLB", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=16)),
+#("DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("DLB", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=7)),
+#("DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=15)),
+#("AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=8)),
+#("DLB", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=13)),
+#("DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=12)),
 
-    #("DLB", replace(efficientnetb0, augmentation_level="weak", epochs=5)),
-    #("AIR_LEISH", replace(efficientnetb0, augmentation_level="weak", epochs=6)),
-    #("DeepLeish", replace(efficientnetb0, augmentation_level="weak", epochs=7)),
-
-    #("DLB", replace(resnet50, augmentation_level="medium", epochs=5)),
-    #("AIR_LEISH", replace(resnet50, augmentation_level="medium", epochs=6)),
-    #("DeepLeish", replace(resnet50, augmentation_level="medium", epochs=5)),
-
-    #("DLB", replace(densenet121, augmentation_level="medium", epochs=6)),
-    #("AIR_LEISH", replace(densenet121, augmentation_level="medium", epochs=9)),
-    #("DeepLeish", replace(densenet121, augmentation_level="medium", epochs=8)),
-
-    #("DLB", replace(efficientnetb0, augmentation_level="medium", epochs=8)),
-    #("AIR_LEISH", replace(efficientnetb0, augmentation_level="medium", epochs=8)),
-    #("DeepLeish", replace(efficientnetb0, augmentation_level="medium", epochs=10)),
-
-    #("DLB", replace(resnet50, augmentation_level="strong", epochs=6)),
-    #("AIR_LEISH", replace(resnet50, augmentation_level="strong", epochs=5)),
-    #("DeepLeish", replace(resnet50, augmentation_level="strong", epochs=7)),
-
-    #("DLB", replace(densenet121, augmentation_level="strong", epochs=4)),
-    #("AIR_LEISH", replace(densenet121, augmentation_level="strong", epochs=7)),
-    #("DeepLeish", replace(densenet121, augmentation_level="strong", epochs=9)),
-
-    #("DLB", replace(efficientnetb0, augmentation_level="strong", epochs=7)),
-    #("AIR_LEISH", replace(efficientnetb0, augmentation_level="strong", epochs=9)),
-    #("DeepLeish", replace(efficientnetb0, augmentation_level="strong", epochs=11)),
+#("AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=12)),
+#("DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=23)),
+#("AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=8)),
+#("DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=17)),
+#("DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=17)),
+#("AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=19)),
 ]
 
 if __name__ == "__main__":
+    seeds = [41, 42, 43, 44, 45]
+
     for dataset_name, config in configs:
         train_dataset, test_dataset = load_datasets(dataset_name)
+        historys = []
 
-        history = train_validate_model(
-            train_dataset,
-            test_dataset,
-            config
-        )
+        for seed in seeds:
+            print(f"\n{'=' * 50}")
+            print(f"Treinando com seed {seed}")
+            print(f"{'=' * 50}")
 
-        torch.cuda.empty_cache()
-        gc.collect()
+            history = train_validate_model(
+                train_dataset,
+                test_dataset,
+                replace(config, training_seed=seed)
+            )
+            historys.append(history)
+
+            torch.cuda.empty_cache()
+            gc.collect()
 
         save_training_result(
-            model_result=history,
-            config=config,
+            model_result=historys,
+            config=replace(config, training_seed=None),  # resultado agrega várias seeds
             dataset_name=dataset_name,
-            filename='experiments/training.csv')
+            filename=f'experiments/loso/results/intra/traning.csv')

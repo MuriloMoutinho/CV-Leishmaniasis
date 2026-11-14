@@ -14,7 +14,7 @@ class TrainingConfig:
     fine_tuning: str | None = None
     augmentation_level: str = 'medium'
     scheduler_name: str | None = None
-    training_seed: int | None = None
+    training_seed: int | None = 42
 
 @dataclass
 class KFoldConfig:

@@ -7,7 +7,7 @@ from dataclasses import replace
 from torch.utils.data import ConcatDataset
 
 from data import save_kfold_result
-from training import train_validate_kfold, set_seed, KFoldConfig, TrainingConfig
+from training import train_validate_kfold, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
 DATASET_CROSS_ROOT = Path("../datasets-cross")
@@ -103,8 +103,6 @@ def suggest_config(trial, model_name):
     return config
 
 def evaluate_config_on_dataset(config, dataset_name, model_name, trial):
-    set_seed()
-
     dataset = load_dataset(dataset_name)
 
     fold_results, fold_histories = train_validate_kfold(

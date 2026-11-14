@@ -4,7 +4,7 @@ import gc, torch, optuna, torchvision, torch.cuda, ast
 import pandas as pd
 from dataclasses import replace
 from data import save_kfold_result
-from training import train_validate_kfold, set_seed, KFoldConfig, TrainingConfig
+from training import train_validate_kfold, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
 
@@ -76,7 +76,6 @@ def suggest_config(trial, model_name):
 def evaluate_config_on_datasets(config):
     dataset_scores = {}
 
-    set_seed()
     for dataset_name in DATASETS.keys():
         dataset = load_dataset(dataset_name)
 

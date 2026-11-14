@@ -1,87 +1,165 @@
 from dataclasses import replace
 from pathlib import Path
-from time import time
 
 import gc
 import torch
 import torchvision
 
-from handler.training_factorys import create_augmentation, create_binary_model, create_loss_function
 from data import save_cross_dataset_result
-from training import validate_model, train_model, set_seed, TrainingConfig
-from training_config import create_dataloader
+from training import train_validate_crossdataset, TrainingConfig
 
-DATASET_ROOT = Path("../datasets-cross")
+DATASET_CROSS_ROOT = Path("../datasets-cross")
+DATASET_CROSSTRAIN_ROOT = Path("../datasets-crosstrain")
 
 DATASETS = {
-    "AIR_LEISH": DATASET_ROOT / "AIR_LEISH",
-    "DeepLeish": DATASET_ROOT / "DeepLeish",
-    "DLB": DATASET_ROOT / "DLB",
+    "CROSS_AIR_LEISH": DATASET_CROSS_ROOT / "AIR_LEISH",
+    "CROSS_DeepLeish": DATASET_CROSS_ROOT / "DeepLeish",
+    "CROSS_DLB": DATASET_CROSS_ROOT / "DLB",
+
+    "DLB+Deep": DATASET_CROSSTRAIN_ROOT / "DLB+Deep",
+    "AIR+Deep": DATASET_CROSSTRAIN_ROOT / "AIR+Deep",
+    "DLB+AIR": DATASET_CROSSTRAIN_ROOT / "DLB+AIR",
 }
 
-test_transform = create_augmentation("weak", (768, 576))["val"]
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-def load_train_dataset(dataset_name: str):
-    root = DATASET_ROOT / dataset_name
+def load_dataset(dataset_name: str):
+    root = DATASETS[dataset_name]
     return torchvision.datasets.ImageFolder(root=str(root))
-
-def load_test_loader(dataset_name: str, batch_size: int = 16):
-    root = DATASET_ROOT / dataset_name
-    test_dataset = torchvision.datasets.ImageFolder(root=str(root), transform=test_transform)
-    return create_dataloader(test_dataset, batch_size, False)
-
-def load_trained_model(config: TrainingConfig, checkpoint_path: Path, device):
-    if checkpoint_path.is_file():
-        model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-        return model
-    return None
 
 
 default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
                                 batch_size=24, fine_tuning="last_block", resolution=(576, 432),
                                 epochs=0, augmentation_level="", model_name="", dropout=0, learning_rate=0, weight_decay=0)
 
-resnet50 = replace(default_config, model_name="resnet50", dropout=0.4, learning_rate=0.002, weight_decay=0.000001)
-densenet121 = replace(default_config, model_name="densenet121", dropout=0, learning_rate=0.002, weight_decay=0.001)
-efficientnetb0 = replace(default_config, model_name="efficientnetb0", dropout=0.2, learning_rate=0.003, weight_decay=0.0001)
-
 configs = [
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=5)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=5)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.003, weight_decay=0.0001, epochs=12)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.003, weight_decay=0.0001, epochs=12)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
 
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=7)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=7)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.003, weight_decay=0.0001, epochs=9)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.003, weight_decay=0.0001, epochs=9)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=5)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=5)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=6)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=6)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.003, weight_decay=0.0001, epochs=11)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.003, weight_decay=0.0001, epochs=11)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=9)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=9)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=6)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=6)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=24)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=24)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=21)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=21)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=5)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=5)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=25)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=25)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=8)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=8)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=20)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=20)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=15)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=15)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=8)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=8)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=19)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=19)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=14)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=14)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=19)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=19)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=6)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=6)),
+
+#("CROSS_AIR_LEISH", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=13)),
+#("CROSS_AIR_LEISH", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=13)),
+#("CROSS_DeepLeish", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=14)),
+#("CROSS_DeepLeish", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=14)),
+#("CROSS_DLB", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+#("CROSS_DLB", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=12)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=22)),
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=19)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=12)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=18)),
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=17)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.2, learning_rate=0.002, weight_decay=1e-06, epochs=8)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="densenet121", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=11)),
+
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.2, learning_rate=0.001, weight_decay=0.0001, epochs=17)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.5, learning_rate=0.0007, weight_decay=0.01, epochs=28)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=23)),
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.2, learning_rate=0.001, weight_decay=0.0001, epochs=24)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.5, learning_rate=0.0007, weight_decay=0.01, epochs=20)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=19)),
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.2, learning_rate=0.001, weight_decay=0.0001, epochs=30)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.5, learning_rate=0.0007, weight_decay=0.01, epochs=24)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="efficientnetb0", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=1e-06, epochs=24)),
+
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=23)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=13)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="weak", dropout=0.4, learning_rate=0.002, weight_decay=0.0001, epochs=17)),
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=15)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=14)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="medium", dropout=0.4, learning_rate=0.002, weight_decay=0.0001, epochs=28)),
+#("AIR+Deep", "CROSS_DLB", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.1, learning_rate=0.003, weight_decay=0.0001, epochs=15)),
+#("DLB+AIR", "CROSS_DeepLeish", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.1, learning_rate=0.002, weight_decay=1e-06, epochs=10)),
+#("DLB+Deep", "CROSS_AIR_LEISH", replace(default_config, model_name="resnet50", augmentation_level="strong", dropout=0.4, learning_rate=0.002, weight_decay=0.0001, epochs=15)),
 ]
 
 if __name__ == "__main__":
-    set_seed()
+    seeds = [41, 42, 43, 44, 45]
+
     for name_train_dataset, name_test_dataset, config in configs:
+        train_dataset = load_dataset(name_train_dataset)
+        test_dataset = load_dataset(name_test_dataset)
+        historys = []
 
-        print(f"\nTreinado em {name_train_dataset} | Testado em {name_test_dataset} | {config.model_name} | aug={config.augmentation_level} ")
-        checkpoint_path = Path(f"experiments/models/total/{name_train_dataset}_{config.model_name}_{config.augmentation_level}.pth")
-        model = load_trained_model(config, checkpoint_path, device)
+        for seed in seeds:
+            print(f"\n{'=' * 50}")
+            print(f"Treinando com seed {seed}")
+            print(f"{'=' * 50}")
+            print(f"\nTreinado em {name_train_dataset} | Testado em {name_test_dataset} | {config.model_name} | aug={config.augmentation_level} ")
 
-        if model is None:
-            print(f"Modelo não encontrado. Treinando {config.model_name} com aug {config.augmentation_level} em {name_train_dataset}.")
-            train_dataset = load_train_dataset(name_train_dataset)
-            model = train_model(train_dataset, config, checkpoint_path)
+            checkpoint_path = Path(
+                f"experiments/loso2/results/cross/models/{name_train_dataset}_{config.model_name}_{config.augmentation_level}_{seed}.pth")
 
-        model.to(device)
-        model.eval()
+            #tag = hashlib.md5(json.dumps(asdict(config), sort_keys=True).encode()).hexdigest()[:8]
+            #checkpoint_path = Path(f".../{train}_{config.model_name}_{config.augmentation_level}_{tag}_{seed}.pth")
 
-        test_loader = load_test_loader(name_test_dataset)
-        loss_function = create_loss_function(config.loss_name, pos_weight=None)
+            metrics = train_validate_crossdataset(
+                train_dataset,
+                test_dataset,
+                replace(config, training_seed=seed),
+                checkpoint_path
+            )
+            historys.append(metrics)
 
-        start = time()
-        metrics = validate_model(model, test_loader, loss_function, device)
-        metrics['time'] = time() - start
-        print(metrics)
-
-        torch.cuda.empty_cache()
-        gc.collect()
+            torch.cuda.empty_cache()
+            gc.collect()
 
         save_cross_dataset_result(
-            model_result=metrics,
+            model_result=historys,
             trained_on=name_train_dataset,
             tested_on=name_test_dataset,
-            config=config,
-            filename="experiments/cross_dataset_results2.csv",
+            config=replace(config, training_seed=None),  # resultado agrega várias seeds
+            filename="experiments/loso2/results/cross/cross_training.csv",
         )
