@@ -16,7 +16,7 @@ def train_model(
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
 
-    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay, config.fine_tuning)
+    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay)
     optimizer = create_optimizer(config.optimizer_name, param_groups)
 
     pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples)))

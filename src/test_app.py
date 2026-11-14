@@ -75,10 +75,10 @@ def apply_strong_augmentation(pil_image):
     return Image.fromarray(image)
 
 model = load_model()
-for param in model.layer4.parameters():
+for param in model.last_block.parameters():
     param.requires_grad = True
 
-target_layer = model.layer4[-1].conv3
+target_layer = model.last_block[-1].conv3
 
 st.title("Lesh Pytorch")
 st.write("\n")

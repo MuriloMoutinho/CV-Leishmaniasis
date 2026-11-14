@@ -1,27 +1,29 @@
+from torch import nn
 from torchvision import models
-import torch.nn as nn
 from torchvision.models import ResNet50_Weights
 
+from models.binary_model import BinaryModel
 
-def create_binary_resnet(dropout, fine_tuning=None):
-    model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
 
-    for param in model.parameters():
-        param.requires_grad = False
+class BinaryResNet50(BinaryModel):
 
-    if fine_tuning not in (None, "last_block", "last_two_blocks"):
-            raise ValueError("Fine_tuning inválido")
+    def _build_backbone(self) -> nn.Module:
+        return models.resnet50(weights=ResNet50_Weights.DEFAULT)
 
-    if fine_tuning in ["last_block", "last_two_blocks"]:
-        for param in model.layer4.parameters():
-            param.requires_grad = True
+    def _replace_classifier(self, dropout: float):
+        self.backbone.fc = nn.Sequential(
+            nn.Dropout(p=dropout),
+            nn.Linear(self.backbone.fc.in_features, 1)
+        )
 
-    if fine_tuning == "last_two_blocks":
-        for param in model.layer3.parameters():
-            param.requires_grad = True
+    @property
+    def classifier(self) -> nn.Module:
+        return self.backbone.fc
 
-    model.fc = nn.Sequential(
-        nn.Dropout(p=dropout),
-        nn.Linear(model.fc.in_features, 1)
-    )
-    return model
+    @property
+    def last_block(self) -> nn.Module:
+        return self.backbone.layer4
+
+    @property
+    def second_last_block(self) -> nn.Module:
+        return self.backbone.layer3

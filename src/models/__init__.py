@@ -1,3 +1,4 @@
-from .resnet import create_binary_resnet
-from .densenet import create_binary_densenet
-from .efficientnet import create_binary_efficientnet
+from .binary_model import BinaryModel
+from .resnet import BinaryResNet50
+from .densenet import BinaryDenseNet121
+from .efficientnet import BinaryEfficientNetB0

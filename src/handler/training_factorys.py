@@ -2,7 +2,7 @@ import torch
 
 from augmentation import weak_augmentation, medium_augmentation, strong_augmentation, AugmentationTransforms
 from training_config import get_warmup_cosine
-from models import create_binary_resnet, create_binary_densenet, create_binary_efficientnet
+from models import BinaryModel, BinaryResNet50, BinaryDenseNet121, BinaryEfficientNetB0
 
 def create_optimizer(optimizer_name, param_group):
     if optimizer_name == "adamw":
@@ -18,15 +18,17 @@ def create_loss_function(loss_name, pos_weight):
 
     raise TypeError("Loss function incorreta")
 
-def create_binary_model(model_name, dropout=0, fine_tuning=None):
-    if model_name == "resnet50":
-        return create_binary_resnet(dropout, fine_tuning)
-    elif model_name == "densenet121":
-        return create_binary_densenet(dropout, fine_tuning)
-    elif model_name == "efficientnetb0":
-        return create_binary_efficientnet(dropout, fine_tuning)
+def create_binary_model(model_name, dropout=0, fine_tuning=None) -> BinaryModel:
+    models = {
+        "resnet50": BinaryResNet50,
+        "densenet121": BinaryDenseNet121,
+        "efficientnetb0": BinaryEfficientNetB0,
+    }
 
-    raise TypeError("Modelo incorreto")
+    if model_name not in models:
+        raise TypeError("Modelo incorreto")
+
+    return models[model_name](dropout, fine_tuning)
 
 def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
     if scheduler_name == "warmup+cosine":

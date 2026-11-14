@@ -43,7 +43,7 @@ def train_validate_kfold(
 
         fold_model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
 
-        param_groups = get_optimizer_param_groups(fold_model, config.learning_rate, config.weight_decay, config.fine_tuning)
+        param_groups = get_optimizer_param_groups(fold_model, config.learning_rate, config.weight_decay)
         optimizer = create_optimizer(config.optimizer_name, param_groups)
 
         pos_weight = pos_weight.to(device)

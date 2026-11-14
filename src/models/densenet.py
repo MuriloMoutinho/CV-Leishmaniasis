@@ -1,27 +1,29 @@
+from torch import nn
 from torchvision import models
-import torch.nn as nn
 from torchvision.models import DenseNet121_Weights
 
-def create_binary_densenet(dropout, fine_tuning=None):
-    model = models.densenet121(weights=DenseNet121_Weights.DEFAULT)
+from models.binary_model import BinaryModel
 
-    for param in model.parameters():
-        param.requires_grad = False
 
-    if fine_tuning not in (None, "last_block", "last_two_blocks"):
-            raise ValueError("Fine_tuning inválido")
+class BinaryDenseNet121(BinaryModel):
 
-    if fine_tuning in ["last_block", "last_two_blocks"]:
-        for param in model.features.denseblock4.parameters():
-            param.requires_grad = True
+    def _build_backbone(self) -> nn.Module:
+        return models.densenet121(weights=DenseNet121_Weights.DEFAULT)
 
-    if fine_tuning == "last_two_blocks":
-        for param in model.features.denseblock3.parameters():
-            param.requires_grad = True
+    def _replace_classifier(self, dropout: float):
+        self.backbone.classifier = nn.Sequential(
+            nn.Dropout(p=dropout),
+            nn.Linear(self.backbone.classifier.in_features, 1)
+        )
 
-    model.classifier = nn.Sequential(
-        nn.Dropout(p=dropout),
-        nn.Linear(model.classifier.in_features, 1)
-    )
+    @property
+    def classifier(self) -> nn.Module:
+        return self.backbone.classifier
 
-    return model
+    @property
+    def last_block(self) -> nn.Module:
+        return self.backbone.features.denseblock4
+
+    @property
+    def second_last_block(self) -> nn.Module:
+        return self.backbone.features.denseblock3
