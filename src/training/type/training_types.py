@@ -22,10 +22,3 @@ class KFoldConfig:
     val_split_seed: int = 42
     patience_early_stopping: int = 10
     metric_to_monitor: str = "f1"
-
-@dataclass
-class HoldoutConfig:
-    val_ratio: int = 20
-    val_split_seed: int = 42
-    patience_early_stopping: int = 10
-    metric_to_monitor: str = "f1"

@@ -5,7 +5,90 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime
 
-from training import TrainingConfig, KFoldConfig, HoldoutConfig
+from training import TrainingConfig, KFoldConfig
+
+
+PERCENT_METRICS = [
+    "f1_class1", "f1_class0", "f1_macro", "f1_macro_tuned",
+    "accuracy", "balanced_accuracy",
+    "precision", "recall", "specificity",
+    "roc_auc", "pr_auc_class1", "pr_auc_class0",
+]
+RAW_METRICS = ["mcc"]
+CONFUSION_METRICS = ["tn", "fp", "fn", "tp"]
+ARRAY_KEYS = ("labels", "probabilities")
+
+
+def _load_previous(filename):
+    if os.path.exists(filename):
+        df_old = pd.read_csv(filename)
+        return df_old, len(df_old) + 1
+    return pd.DataFrame(), 1
+
+
+def _save_arrays(results, experiment_dir: Path, file_prefix: str):
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    for n, res in enumerate(results, start=1):
+        numpy.savez(
+            experiment_dir / f"{file_prefix}{n}.npz",
+            labels=res["labels"],
+            probabilities=res["probabilities"],
+        )
+
+
+def _aggregate_metrics(df: pd.DataFrame) -> dict:
+    metrics = {}
+    for name in PERCENT_METRICS:
+        if name in df.columns:
+            metrics[f"{name}_mean"] = round(df[name].mean() * 100, 2)
+            metrics[f"{name}_std"] = round(df[name].std() * 100, 2)
+
+    for name in RAW_METRICS:
+        if name in df.columns:
+            metrics[f"{name}_mean"] = round(df[name].mean(), 4)
+            metrics[f"{name}_std"] = round(df[name].std(), 4)
+
+    for name in CONFUSION_METRICS:
+        if name in df.columns:
+            metrics[f"{name}_sum"] = int(df[name].sum())
+    return metrics
+
+
+def _save_experiment(
+    results,
+    config: TrainingConfig,
+    info: dict,
+    filename: str,
+    labels_dir: str,
+    file_prefix: str,
+    extra=None,
+):
+    df_old, experiment_id = _load_previous(filename)
+
+    _save_arrays(results, Path(filename).parent / labels_dir / str(experiment_id), file_prefix)
+
+    df_runs = pd.DataFrame([
+        {k: v for k, v in r.items() if k not in ARRAY_KEYS} for r in results
+    ])
+
+    result = {
+        "experiment_id": experiment_id,
+        "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time": round(df_runs["time"].sum() / 60, 2),
+        **info,
+        **asdict(config),
+        **_aggregate_metrics(df_runs),
+    }
+    if extra is not None:
+        result.update(extra(df_runs))
+
+    df_result = pd.concat([df_old, pd.DataFrame([result])], ignore_index=True)
+
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
+    df_result.to_csv(filename, index=False)
+    print(f"\nExperimento {experiment_id} salvo")
+
+    return df_result
 
 
 def save_kfold_result(
@@ -15,123 +98,24 @@ def save_kfold_result(
     kfold_config: KFoldConfig,
     filename="kfold.csv"
 ):
-    if os.path.exists(filename):
-        df_old = pd.read_csv(filename)
-        experiment_id = len(df_old) + 1
-    else:
-        df_old = pd.DataFrame()
-        experiment_id = 1
+    def extra(df_folds):
+        values = {
+            "best_epoch_mean": round(df_folds["epoch"].mean(), 2),
+            "best_epoch_median": round(df_folds["epoch"].median(), 2),
+            "best_epoch_std": round(df_folds["epoch"].std(), 2),
+        }
+        if kfold_config is not None:
+            values.update(asdict(kfold_config))
+        return values
 
-    experiment_dir = Path(filename).parent / "labels" / str(experiment_id)
-    experiment_dir.mkdir(parents=True, exist_ok=True)
-
-    for fold, fold_result in enumerate(fold_results, start=1):
-        numpy.savez(
-            experiment_dir / f"fold{fold}.npz",
-            labels=fold_result["labels"],
-            probabilities=fold_result["probabilities"],
-        )
-
-    scalar_results = [
-        {k: v for k, v in r.items() if k not in ("labels", "probabilities")}
-        for r in fold_results
-    ]
-    df_folds = pd.DataFrame(scalar_results)
-
-    result = {
-        "experiment_id": experiment_id,
-        "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time": round(df_folds["time"].sum() / 60, 2),
-        "dataset_name": dataset_name,
-    }
-
-    result.update(asdict(config))
-
-    percent_metrics = [
-        "f1", "f1_class0", "f1_macro", "f1_macro_tuned",
-        "accuracy", "balanced_accuracy",
-        "precision", "recall",
-        "roc_auc", "pr_auc_class1", "pr_auc_class0",
-    ]
-    for name in percent_metrics:
-        if name in df_folds.columns:
-            result[f"{name}_mean"] = round(df_folds[name].mean() * 100, 2)
-            result[f"{name}_std"] = round(df_folds[name].std() * 100, 2)
-
-    threshold_metrics = ["mcc"]
-    for name in threshold_metrics:
-        if name in df_folds.columns:
-            result[f"{name}_mean"] = round(df_folds[name].mean(), 4)
-            result[f"{name}_std"] = round(df_folds[name].std(), 4)
-
-    for name in ["tn", "fp", "fn", "tp"]:
-        if name in df_folds.columns:
-            result[f"{name}_sum"] = int(df_folds[name].sum())
-
-    result.update({
-        "best_epoch_mean": round(df_folds["epoch"].mean(), 2),
-        "best_epoch_median": round(df_folds["epoch"].median(), 2),
-        "best_epoch_std": round(df_folds["epoch"].std(), 2),
-    })
-
-    if kfold_config is not None:
-        result.update(asdict(kfold_config))
-
-    df_result = pd.DataFrame([result])
-    df_result = pd.concat([df_old, df_result], ignore_index=True)
-
-    path = Path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    df_result.to_csv(filename, index=False)
-    print(f"\nExperimento {experiment_id} salvo")
-
-    return df_result
-
-def save_holdout_result(
-    model_result,
-    config: TrainingConfig,
-    holdout_config: HoldoutConfig,
-    dataset_name: str,
-    filename="holdout.csv"
-):
-    if os.path.exists(filename):
-        df_old = pd.read_csv(filename)
-        experiment_id = len(df_old) + 1
-    else:
-        df_old = pd.DataFrame()
-        experiment_id = 1
-
-    result = {
-        "experiment_id": experiment_id,
-        "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time": round(model_result['time'] / 60, 2),
-        "dataset_name": dataset_name,
-    }
-
-    result.update(asdict(config))
-
-    result.update({
-        "f1": round(model_result['f1'] * 100, 2),
-        "accuracy": round(model_result['accuracy'] * 100, 2),
-        "precision": round(model_result['precision'] * 100, 2),
-        "recall": round(model_result['recall'] * 100, 2),
-        "roc_auc": round(model_result['roc_auc'] * 100, 2),
-        "pr_auc": round(model_result['pr_auc'] * 100, 2),
-        "best_epoch": round(model_result["epoch"], 2),
-    })
-
-    result.update(asdict(holdout_config))
-
-    df_result = pd.DataFrame([result])
-    df_result = pd.concat([df_old, df_result], ignore_index=True)
-
-    path = Path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    df_result.to_csv(filename, index=False)
-    print(f"\nExperimento {experiment_id} salvo")
-    return df_result
+    return _save_experiment(
+        fold_results, config,
+        info={"dataset_name": dataset_name},
+        filename=filename,
+        labels_dir="labels-kfold",
+        file_prefix="fold",
+        extra=extra,
+    )
 
 
 def save_training_result(
@@ -140,40 +124,13 @@ def save_training_result(
     dataset_name: str,
     filename="training.csv"
 ):
-    if os.path.exists(filename):
-        df_old = pd.read_csv(filename)
-        experiment_id = len(df_old) + 1
-    else:
-        df_old = pd.DataFrame()
-        experiment_id = 1
-
-    result = {
-        "experiment_id": experiment_id,
-        "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time":  round(model_result['time'] / 60, 2),
-        "dataset_name": dataset_name,
-    }
-
-    result.update(asdict(config))
-
-    result.update({
-        "f1": round(model_result['f1'] * 100, 2),
-        "accuracy": round(model_result['accuracy'] * 100, 2),
-        "precision": round(model_result['precision'] * 100, 2),
-        "recall": round(model_result['recall'] * 100, 2),
-        "roc_auc": round(model_result['roc_auc'] * 100, 2),
-        "pr_auc": round(model_result['pr_auc'] * 100, 2),
-    })
-
-    df_result = pd.DataFrame([result])
-    df_result = pd.concat([df_old, df_result], ignore_index=True)
-
-    path = Path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    df_result.to_csv(filename, index=False)
-    print(f"\nExperimento {experiment_id} salvo")
-    return df_result
+    return _save_experiment(
+        model_result, config,
+        info={"dataset_name": dataset_name},
+        filename=filename,
+        labels_dir="labels-training",
+        file_prefix="model",
+    )
 
 
 def save_cross_dataset_result(
@@ -183,39 +140,10 @@ def save_cross_dataset_result(
     config: TrainingConfig,
     filename="cross_dataset_results.csv"
 ):
-    if os.path.exists(filename):
-        df_old = pd.read_csv(filename)
-        experiment_id = len(df_old) + 1
-    else:
-        df_old = pd.DataFrame()
-        experiment_id = 1
-
-    result = {
-        "experiment_id": experiment_id,
-        "time": round(model_result.get('time', 0) / 60, 2),
-        "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "trained_on": trained_on,
-        "tested_on": tested_on,
-        "model_name": config.model_name,
-        "fine_tuning": config.fine_tuning,
-        "augmentation_level": config.augmentation_level,
-    }
-
-    result.update({
-        "f1": round(model_result['f1'] * 100, 2),
-        "accuracy": round(model_result['accuracy'] * 100, 2),
-        "precision": round(model_result['precision'] * 100, 2),
-        "recall": round(model_result['recall'] * 100, 2),
-        "roc_auc": round(model_result['roc_auc'] * 100, 2),
-        "pr_auc": round(model_result['pr_auc'] * 100, 2),
-    })
-
-    df_result = pd.DataFrame([result])
-    df_result = pd.concat([df_old, df_result], ignore_index=True)
-
-    path = Path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    df_result.to_csv(filename, index=False)
-    print(f"\nExperimento {experiment_id} salvo ({trained_on} -> {tested_on})")
-    return df_result
+    return _save_experiment(
+        model_result, config,
+        info={"trained_on": trained_on, "tested_on": tested_on},
+        filename=filename,
+        labels_dir="cross-training",
+        file_prefix="model",
+    )

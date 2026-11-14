@@ -46,6 +46,8 @@ def validate_model(model, data_loader, loss_function, device):
     except ValueError:
         roc_auc = float("nan")
 
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+
     metrics = {
         "loss": average_loss,
         "accuracy": accuracy_score(y_true, y_pred),
@@ -53,7 +55,8 @@ def validate_model(model, data_loader, loss_function, device):
         "mcc": matthews_corrcoef(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
         "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
+        "specificity": specificity,
+        "f1_class1": f1_score(y_true, y_pred, zero_division=0),
         "f1_class0": f1_score(y_true, y_pred, pos_label=0, zero_division=0),
         "f1_macro": f1_score(y_true, y_pred, average="macro", zero_division=0),
         "roc_auc": roc_auc,
