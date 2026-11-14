@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import torch, time
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
 from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
@@ -7,8 +5,7 @@ from training import train_one_epoch, set_seed, TrainingConfig
 
 def train_model(
     train_dataset,
-    config: TrainingConfig,
-    filename=None
+    config: TrainingConfig
 ):
     set_seed(config.training_seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,11 +38,6 @@ def train_model(
 
         end_epoch = time.time()
         print(f"Tempo época: {end_epoch - start_epoch:.2f}s")
-
-    if filename is not None:
-        path = Path(filename)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(model.state_dict(), filename)
 
     end = time.time()
     print(f"Tempo final: {end - start:.2f}s")

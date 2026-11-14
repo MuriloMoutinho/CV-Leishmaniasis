@@ -4,7 +4,7 @@ from pathlib import Path
 
 import torchvision
 
-from data import save_training_result, save_npz
+from data import save_training_result, save_npz, save_model, load_model, config_tag
 from training import train_validate_model, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
@@ -20,6 +20,10 @@ def load_datasets(name: str):
     train_dataset = torchvision.datasets.ImageFolder(root=str(root / "train"))
     test_dataset = torchvision.datasets.ImageFolder(root=str(root / "test"))
     return train_dataset, test_dataset
+
+def model_path(dataset_name: str, config: TrainingConfig, seed: int) -> str:
+    return (f"experiments/loso/results/intra/models/"
+            f"{dataset_name}_{config.model_name}_{config.augmentation_level}_{config_tag(config)}_{seed}.pth")
 
 default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
                                 batch_size=24, fine_tuning="last_block", resolution=(576, 432),
@@ -69,13 +73,21 @@ if __name__ == "__main__":
             print(f"Treinando com seed {seed}")
             print(f"{'=' * 50}")
 
-            history = train_validate_model(
+            path = model_path(dataset_name, config, seed)
+            loaded_model = load_model(config, path)
+
+            history, model = train_validate_model(
                 train_dataset,
                 test_dataset,
-                replace(config, training_seed=seed)
+                replace(config, training_seed=seed),
+                model=loaded_model
             )
             historys.append(history)
 
+            if loaded_model is None:
+                save_model(model, path)
+
+            del model, loaded_model
             torch.cuda.empty_cache()
             gc.collect()
 

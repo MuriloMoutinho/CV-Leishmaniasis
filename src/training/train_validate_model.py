@@ -1,53 +1,33 @@
 import torch, time
 
-from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
-from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from training import train_one_epoch, validate_model, set_seed, TrainingConfig
+from handler import create_loss_function, create_augmentation
+from training_config import compute_pos_weight, create_dataloader
+from training import validate_model, train_model, set_seed, TrainingConfig
 
 def train_validate_model(
     train_dataset,
     test_dataset,
-    config: TrainingConfig
+    config: TrainingConfig,
+    model=None
 ):
     set_seed(config.training_seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    transformations = create_augmentation(config.augmentation_level, config.resolution)
-    train_dataset.transform = transformations["train"]
-    train_loader = create_dataloader(train_dataset, config.batch_size, True)
+    start = time.time()
+    if model is None:
+        model = train_model(train_dataset, config)
+    train_time = time.time() - start
 
-    test_dataset.transform = transformations["val"]
+    model.to(device)
+    model.eval()
+
+    test_dataset.transform = create_augmentation(config.augmentation_level, config.resolution)["val"]
     test_loader = create_dataloader(test_dataset, config.batch_size, False)
 
-    model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
-
-    param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay, config.fine_tuning)
-    optimizer = create_optimizer(config.optimizer_name, param_groups)
-
-    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples)))
-    pos_weight = pos_weight.to(device)
+    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples))).to(device)
     loss_function = create_loss_function(config.loss_name, pos_weight)
 
-    scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
-        if config.scheduler_name is not None else None
-
-    start = time.time()
-
-    for epoch in range(config.epochs):
-
-        start_epoch = time.time()
-        print(f"\nÉpoca {epoch + 1}/{config.epochs}")
-
-        train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device, scheduler)
-        print(f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f}")
-
-        end_epoch = time.time()
-        print(f"Tempo época: {end_epoch - start_epoch:.2f}s")
-
-    end = time.time()
-    print(f"Tempo final: {end - start:.2f}s")
-
     val_metrics = validate_model(model, test_loader, loss_function, device)
-    val_metrics['time'] = end - start
+    val_metrics['time'] = train_time
 
-    return val_metrics
+    return val_metrics, model

@@ -1,13 +1,11 @@
-import hashlib
-import json
-from dataclasses import replace, asdict
+from dataclasses import replace
 from pathlib import Path
 
 import gc
 import torch
 import torchvision
 
-from data import save_cross_dataset_result, save_npz
+from data import save_cross_dataset_result, save_npz, save_model, load_model, config_tag
 from training import train_validate_crossdataset, TrainingConfig
 
 DATASET_CROSS_ROOT = Path("../datasets-cross")
@@ -23,10 +21,9 @@ DATASETS = {
     "DLB+AIR": DATASET_CROSSTRAIN_ROOT / "DLB+AIR",
 }
 
-def config_tag(config: TrainingConfig, length: int = 8) -> str:
-    params = asdict(config)
-    params.pop("training_seed", None)
-    return hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest()[:length]
+def model_path(train_dataset_name: str, config: TrainingConfig, seed: int) -> str:
+    return (f"experiments/loso2/results/cross/models/"
+            f"{train_dataset_name}_{config.model_name}_{config.augmentation_level}_{config_tag(config)}_{seed}.pth")
 
 def load_dataset(dataset_name: str):
     root = DATASETS[dataset_name]
@@ -145,18 +142,21 @@ if __name__ == "__main__":
             print(f"{'=' * 50}")
             print(f"\nTreinado em {name_train_dataset} | Testado em {name_test_dataset} | {config.model_name} | aug={config.augmentation_level} ")
 
-            checkpoint_path = Path(
-                f"experiments/loso2/results/cross/models/"
-                f"{name_train_dataset}_{config.model_name}_{config.augmentation_level}_{config_tag(config)}_{seed}.pth")
+            path = model_path(name_train_dataset, config, seed)
+            loaded_model = load_model(config, path)
 
-            metrics = train_validate_crossdataset(
+            metrics, model = train_validate_crossdataset(
                 train_dataset,
                 test_dataset,
                 replace(config, training_seed=seed),
-                checkpoint_path
+                model=loaded_model
             )
             history.append(metrics)
 
+            if loaded_model is None:
+                save_model(model, path)
+
+            del model, loaded_model
             torch.cuda.empty_cache()
             gc.collect()
 
