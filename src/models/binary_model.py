@@ -26,21 +26,26 @@ class BinaryModel(nn.Module, ABC):
 
     @abstractmethod
     def _build_backbone(self) -> nn.Module:
+        ...
 
     @abstractmethod
     def _replace_classifier(self, dropout: float):
+        ...
 
     @property
     @abstractmethod
     def classifier(self) -> nn.Module:
+        ...
 
     @property
     @abstractmethod
     def last_block(self) -> nn.Module:
+        ...
 
     @property
     @abstractmethod
     def second_last_block(self) -> nn.Module:
+        ...
 
     def fine_tuned_blocks(self) -> list[nn.Module]:
         if self.fine_tuning == "last_block":
@@ -52,8 +57,6 @@ class BinaryModel(nn.Module, ABC):
     def forward(self, x):
         return self.backbone(x)
 
-    # Os checkpoints são salvos com as chaves do próprio torchvision (ex.: "layer4.0.conv1.weight").
-    # Delegar ao backbone mantém esse formato e a compatibilidade com os .pth já existentes.
     def state_dict(self, *args, **kwargs):
         return self.backbone.state_dict(*args, **kwargs)
 

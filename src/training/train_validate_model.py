@@ -1,7 +1,7 @@
 import torch, time
 
 from handler import create_loss_function, create_augmentation
-from training_config import compute_pos_weight, create_dataloader
+from training_config import compute_pos_weight, create_dataloader, set_transform
 from training import validate_model, train_model, set_seed, TrainingConfig
 
 def train_validate_model(
@@ -21,10 +21,10 @@ def train_validate_model(
     model.to(device)
     model.eval()
 
-    test_dataset.transform = create_augmentation(config.augmentation_level, config.resolution).val
+    set_transform(test_dataset, create_augmentation(config.augmentation_level, config.resolution).val)
     test_loader = create_dataloader(test_dataset, config.batch_size, False)
 
-    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples))).to(device)
+    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset))).to(device)
     loss_function = create_loss_function(config.loss_name, pos_weight)
 
     val_metrics = validate_model(model, test_loader, loss_function, device)

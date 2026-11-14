@@ -1,6 +1,6 @@
 import torch, time
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
-from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
+from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader, set_transform
 from training import train_one_epoch, set_seed, TrainingConfig
 
 def train_model(
@@ -11,7 +11,7 @@ def train_model(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transformations = create_augmentation(config.augmentation_level, config.resolution)
-    train_dataset.transform = transformations.train
+    set_transform(train_dataset, transformations.train)
     train_loader = create_dataloader(train_dataset, config.batch_size, True)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
@@ -19,7 +19,7 @@ def train_model(
     param_groups = get_optimizer_param_groups(model, config.learning_rate, config.weight_decay)
     optimizer = create_optimizer(config.optimizer_name, param_groups)
 
-    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples)))
+    pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset)))
     pos_weight = pos_weight.to(device)
     loss_function = create_loss_function(config.loss_name, pos_weight)
 

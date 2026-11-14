@@ -6,7 +6,7 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import Subset, ConcatDataset
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
-from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
+from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader, set_transform
 from training import train_one_epoch, validate_model, set_seed, TrainingConfig, KFoldConfig, ValidationMetrics
 
 def train_validate_kfold(
@@ -78,10 +78,6 @@ def train_validate_kfold(
 
     return fold_results
 
-from torch.utils.data import ConcatDataset
-import numpy
-
-
 def get_dataset_labels_and_sources(dataset):
     if isinstance(dataset, ConcatDataset):
         labels = numpy.concatenate([numpy.array(ds.targets) for ds in dataset.datasets])
@@ -99,21 +95,13 @@ def get_dataset_labels_and_sources(dataset):
 
 def create_data_loaders_kfold(dataset, transformations, config, train_idx, val_idx):
     train_dataset = copy.deepcopy(dataset)
-    if isinstance(train_dataset, ConcatDataset):
-        for ds in train_dataset.datasets:
-            ds.transform = transformations.train
-    else:
-        train_dataset.transform = transformations.train
+    set_transform(train_dataset, transformations.train)
 
     train_fold = Subset(train_dataset, train_idx)
     train_loader = create_dataloader(train_fold, config.batch_size, True)
 
     val_dataset = copy.deepcopy(dataset)
-    if isinstance(val_dataset, ConcatDataset):
-        for ds in val_dataset.datasets:
-            ds.transform = transformations.val
-    else:
-        val_dataset.transform = transformations.val
+    set_transform(val_dataset, transformations.val)
 
     val_fold = Subset(val_dataset, val_idx)
     val_loader = create_dataloader(val_fold, config.batch_size, False)

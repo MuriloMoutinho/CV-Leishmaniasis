@@ -30,27 +30,13 @@ N_TRIALS = 15
 BATCH_SIZE = 24
 RANDOM_SEED = 42
 
-EXPERIMENTS_ROOT = "experiments/loso2/pre-results-loso/optuna"
+EXPERIMENTS_ROOT = "experiments/loso/pre-results-loso/optuna"
 
-
-def load_dataset(name: str):
-    root = DATASETS[name]
+def load_dataset(dataset: str):
+    root = DATASETS[dataset]
 
     if isinstance(root, list):
-
-        datasets = [
-            torchvision.datasets.ImageFolder(root=str(DATASETS[dataset_name]))
-            for dataset_name in root
-        ]
-
-        reference_classes = datasets[0].class_to_idx
-
-        for ds in datasets[1:]:
-            if ds.class_to_idx != reference_classes:
-                raise ValueError(f"Classes incompatíveis entre os datasets: {reference_classes} != {ds.class_to_idx}")
-
-        return ConcatDataset(datasets)
-
+        return ConcatDataset([load_dataset(name) for name in root])
     return torchvision.datasets.ImageFolder(root=str(root))
 
 kfold_config = KFoldConfig(

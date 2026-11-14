@@ -3,7 +3,7 @@ import time
 import torch
 
 from handler import create_loss_function, create_augmentation
-from training_config import create_dataloader
+from training_config import create_dataloader, set_transform
 from training import validate_model, train_model, set_seed, TrainingConfig
 
 
@@ -24,7 +24,7 @@ def train_validate_crossdataset(
     model.to(device)
     model.eval()
 
-    test_dataset.transform = create_augmentation(config.augmentation_level, config.resolution).val
+    set_transform(test_dataset, create_augmentation(config.augmentation_level, config.resolution).val)
     test_loader = create_dataloader(test_dataset, config.batch_size, False)
 
     loss_function = create_loss_function(config.loss_name, pos_weight=None)

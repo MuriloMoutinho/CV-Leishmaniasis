@@ -4,29 +4,32 @@ from pathlib import Path
 import gc
 import torch
 import torchvision
+from torch.utils.data import ConcatDataset
 
 from data import save_cross_dataset_result, save_npz, save_model, load_model, config_tag
 from training import train_validate_crossdataset, TrainingConfig
 
 DATASET_CROSS_ROOT = Path("../datasets-cross")
-DATASET_CROSSTRAIN_ROOT = Path("../datasets-crosstrain")
 
 DATASETS = {
     "CROSS_AIR_LEISH": DATASET_CROSS_ROOT / "AIR_LEISH",
     "CROSS_DeepLeish": DATASET_CROSS_ROOT / "DeepLeish",
     "CROSS_DLB": DATASET_CROSS_ROOT / "DLB",
 
-    "DLB+Deep": DATASET_CROSSTRAIN_ROOT / "DLB+Deep",
-    "AIR+Deep": DATASET_CROSSTRAIN_ROOT / "AIR+Deep",
-    "DLB+AIR": DATASET_CROSSTRAIN_ROOT / "DLB+AIR",
+    "DLB+Deep": ["CROSS_DLB", "CROSS_DeepLeish"],
+    "AIR+Deep": ["CROSS_AIR_LEISH", "CROSS_DeepLeish"],
+    "DLB+AIR": ["CROSS_DLB", "CROSS_AIR_LEISH"],
 }
 
 def model_path(train_dataset_name: str, config: TrainingConfig, seed: int) -> str:
-    return (f"experiments/loso2/results/cross/models/"
+    return (f"experiments/loso/results/cross/models/"
             f"{train_dataset_name}_{config.model_name}_{config.augmentation_level}_{config_tag(config)}_{seed}.pth")
 
-def load_dataset(dataset_name: str):
-    root = DATASETS[dataset_name]
+def load_dataset(dataset: str):
+    root = DATASETS[dataset]
+
+    if isinstance(root, list):
+        return ConcatDataset([load_dataset(name) for name in root])
     return torchvision.datasets.ImageFolder(root=str(root))
 
 default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
@@ -165,7 +168,7 @@ if __name__ == "__main__":
             trained_on=name_train_dataset,
             tested_on=name_test_dataset,
             config=config,
-            filename="experiments/loso2/results/cross/cross_training.csv",
+            filename="experiments/loso/results/cross/cross_training.csv",
             seeds=seeds,
         )
-        save_npz(history, f"experiments/loso2/results/cross/cross-training/{experiment_id}", file_prefix="model")
+        save_npz(history, f"experiments/loso/results/cross/cross-training/{experiment_id}", file_prefix="model")

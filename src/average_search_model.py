@@ -3,12 +3,24 @@ from pathlib import Path
 import gc, torch, optuna, torchvision, torch.cuda, ast
 import pandas as pd
 from dataclasses import replace
+
+from torch.utils.data import ConcatDataset
+
 from data import save_kfold_result, save_npz
 from training import train_validate_kfold, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
+DATASET_CROSS_ROOT = Path("../datasets-cross")
 
 DATASETS = {
+    "CROSS_AIR_LEISH": DATASET_CROSS_ROOT / "AIR_LEISH",
+    "CROSS_DeepLeish": DATASET_CROSS_ROOT / "DeepLeish",
+    "CROSS_DLB": DATASET_CROSS_ROOT / "DLB",
+
+    "DLB+Deep": ["CROSS_DLB", "CROSS_DeepLeish"],
+    "AIR+Deep": ["CROSS_AIR_LEISH", "CROSS_DeepLeish"],
+    "DLB+AIR": ["CROSS_DLB", "CROSS_AIR_LEISH"],
+
     "AIR_LEISH": DATASET_ROOT / "AIR_LEISH" / "train",
     "DeepLeish": DATASET_ROOT / "DeepLeish" / "train",
     "DLB": DATASET_ROOT / "DLB" / "train",
@@ -20,8 +32,11 @@ RANDOM_SEED = 42
 
 EXPERIMENTS_ROOT = "experiments/optuna"
 
-def load_dataset(name: str):
-    root = DATASETS[name]
+def load_dataset(dataset: str):
+    root = DATASETS[dataset]
+
+    if isinstance(root, list):
+        return ConcatDataset([load_dataset(name) for name in root])
     return torchvision.datasets.ImageFolder(root=str(root))
 
 kfold_config = KFoldConfig(
