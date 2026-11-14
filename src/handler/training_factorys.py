@@ -1,6 +1,6 @@
 import torch
 
-from augmentation import weak_augmentation, medium_augmentation, strong_augmentation
+from augmentation import weak_augmentation, medium_augmentation, strong_augmentation, AugmentationTransforms
 from training_config import get_warmup_cosine
 from models import create_binary_resnet, create_binary_densenet, create_binary_efficientnet
 
@@ -34,7 +34,7 @@ def create_scheduler(scheduler_name, optimizer, steps_per_epoch, epochs):
 
     raise TypeError("Scheduler incorreto")
 
-def create_augmentation(augmentation_level_name, image_size):
+def create_augmentation(augmentation_level_name, image_size) -> AugmentationTransforms:
     if augmentation_level_name == "weak":
         return weak_augmentation(image_size)
     elif augmentation_level_name == "medium":

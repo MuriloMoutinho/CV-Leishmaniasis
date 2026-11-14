@@ -1,5 +1,5 @@
 from .core import set_seed, validate_model, train_one_epoch
-from .type import TrainingConfig, KFoldConfig
+from .type import TrainingConfig, KFoldConfig, TrainMetrics, ValidationMetrics
 
 from .train_model import train_model
 from .train_validate_kfold import train_validate_kfold

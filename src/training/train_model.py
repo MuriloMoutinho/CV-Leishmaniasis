@@ -11,7 +11,7 @@ def train_model(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transformations = create_augmentation(config.augmentation_level, config.resolution)
-    train_dataset.transform = transformations["train"]
+    train_dataset.transform = transformations.train
     train_loader = create_dataloader(train_dataset, config.batch_size, True)
 
     model = create_binary_model(config.model_name, config.dropout, config.fine_tuning)
@@ -34,7 +34,7 @@ def train_model(
         print(f"\nÉpoca {epoch + 1}/{config.epochs}")
 
         train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device, scheduler)
-        print(f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f}")
+        print(f"Train Loss: {train_metrics.loss:.4f} | Train Acc: {train_metrics.accuracy:.4f}")
 
         end_epoch = time.time()
         print(f"Tempo época: {end_epoch - start_epoch:.2f}s")

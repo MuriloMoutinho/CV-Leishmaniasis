@@ -79,7 +79,7 @@ def evaluate_config_on_datasets(config):
     for dataset_name in DATASETS.keys():
         dataset = load_dataset(dataset_name)
 
-        fold_results, fold_histories = train_validate_kfold(
+        fold_results = train_validate_kfold(
             dataset,
             config=config,
             kfold_config=kfold_config,
@@ -94,7 +94,7 @@ def evaluate_config_on_datasets(config):
         )
         save_npz(fold_results, f"{EXPERIMENTS_ROOT}/labels-kfold/{experiment_id}", file_prefix="fold")
 
-        df_folds = pd.DataFrame(fold_results)
+        df_folds = pd.DataFrame([r.scalars() for r in fold_results])
         dataset_scores[dataset_name] = df_folds[kfold_config.metric_to_monitor].mean()
 
         torch.cuda.empty_cache()

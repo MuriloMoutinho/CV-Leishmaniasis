@@ -123,7 +123,7 @@ configs = [
 
 if __name__ == "__main__":
     for dataset_name, config in configs:
-        fold_results, fold_histories = train_validate_kfold(
+        fold_results = train_validate_kfold(
             load_dataset(dataset_name),
             config=config,
             kfold_config=kfold_config

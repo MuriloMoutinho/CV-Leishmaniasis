@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime
 
-from training import TrainingConfig, KFoldConfig
+from training import TrainingConfig, KFoldConfig, ValidationMetrics
 
 
 PERCENT_METRICS = [
@@ -16,7 +16,6 @@ PERCENT_METRICS = [
 ]
 RAW_METRICS = ["mcc"]
 CONFUSION_METRICS = ["tn", "fp", "fn", "tp"]
-ARRAY_KEYS = ("labels", "probabilities")
 
 
 def _load_previous(filename):
@@ -45,7 +44,7 @@ def _aggregate_metrics(df: pd.DataFrame) -> dict:
 
 
 def _save_experiment(
-    results,
+    results: list[ValidationMetrics],
     config: TrainingConfig,
     info: dict,
     filename: str,
@@ -54,9 +53,7 @@ def _save_experiment(
 ):
     df_old, experiment_id = _load_previous(filename)
 
-    df_runs = pd.DataFrame([
-        {k: v for k, v in r.items() if k not in ARRAY_KEYS} for r in results
-    ])
+    df_runs = pd.DataFrame([r.scalars() for r in results])
 
     result = {
         "experiment_id": experiment_id,
@@ -81,7 +78,7 @@ def _save_experiment(
 
 
 def save_kfold_result(
-    fold_results,
+    fold_results: list[ValidationMetrics],
     config: TrainingConfig,
     dataset_name: str,
     kfold_config: KFoldConfig,
@@ -106,7 +103,7 @@ def save_kfold_result(
 
 
 def save_training_result(
-    model_result,
+    model_result: list[ValidationMetrics],
     config: TrainingConfig,
     dataset_name: str,
     filename="training.csv",
@@ -121,7 +118,7 @@ def save_training_result(
 
 
 def save_cross_dataset_result(
-    model_result,
+    model_result: list[ValidationMetrics],
     trained_on: str,
     tested_on: str,
     config: TrainingConfig,

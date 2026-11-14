@@ -21,13 +21,13 @@ def train_validate_model(
     model.to(device)
     model.eval()
 
-    test_dataset.transform = create_augmentation(config.augmentation_level, config.resolution)["val"]
+    test_dataset.transform = create_augmentation(config.augmentation_level, config.resolution).val
     test_loader = create_dataloader(test_dataset, config.batch_size, False)
 
     pos_weight = compute_pos_weight(train_dataset, range(len(train_dataset.samples))).to(device)
     loss_function = create_loss_function(config.loss_name, pos_weight)
 
     val_metrics = validate_model(model, test_loader, loss_function, device)
-    val_metrics['time'] = train_time
+    val_metrics.time = train_time
 
     return val_metrics, model

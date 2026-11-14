@@ -6,7 +6,9 @@ from sklearn.metrics import (
 )
 import numpy as np
 
-def validate_model(model, data_loader, loss_function, device):
+from ..type import ValidationMetrics
+
+def validate_model(model, data_loader, loss_function, device) -> ValidationMetrics:
     model.eval()
     model = model.to(device)
 
@@ -48,21 +50,20 @@ def validate_model(model, data_loader, loss_function, device):
 
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
 
-    metrics = {
-        "loss": average_loss,
-        "accuracy": accuracy_score(y_true, y_pred),
-        "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
-        "mcc": matthews_corrcoef(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "specificity": specificity,
-        "f1_class1": f1_score(y_true, y_pred, zero_division=0),
-        "f1_class0": f1_score(y_true, y_pred, pos_label=0, zero_division=0),
-        "f1_macro": f1_score(y_true, y_pred, average="macro", zero_division=0),
-        "roc_auc": roc_auc,
-        "pr_auc_class1": average_precision_score(y_true, y_prob),
-        "pr_auc_class0": average_precision_score(1 - y_true, 1 - y_prob),
-        "tn": tn, "fp": fp, "fn": fn, "tp": tp,
-        "labels": y_true, "probabilities": y_prob,
-    }
-    return metrics
+    return ValidationMetrics(
+        loss=average_loss,
+        accuracy=accuracy_score(y_true, y_pred),
+        balanced_accuracy=balanced_accuracy_score(y_true, y_pred),
+        mcc=matthews_corrcoef(y_true, y_pred),
+        precision=precision_score(y_true, y_pred, zero_division=0),
+        recall=recall_score(y_true, y_pred, zero_division=0),
+        specificity=specificity,
+        f1_class1=f1_score(y_true, y_pred, zero_division=0),
+        f1_class0=f1_score(y_true, y_pred, pos_label=0, zero_division=0),
+        f1_macro=f1_score(y_true, y_pred, average="macro", zero_division=0),
+        roc_auc=roc_auc,
+        pr_auc_class1=average_precision_score(y_true, y_prob),
+        pr_auc_class0=average_precision_score(1 - y_true, 1 - y_prob),
+        tn=int(tn), fp=int(fp), fn=int(fn), tp=int(tp),
+        labels=y_true, probabilities=y_prob,
+    )

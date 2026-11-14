@@ -1,14 +1,15 @@
 from torchvision import transforms
 
+from augmentation.augmentation_types import AugmentationTransforms
 from augmentation.transforms_utils import create_transforms
 
-def medium_augmentation(image_size):
-    return {
-        'train': create_transforms(image_size, [
+def medium_augmentation(image_size) -> AugmentationTransforms:
+    return AugmentationTransforms(
+        train=create_transforms(image_size, [
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
 
             transforms.RandomAffine(degrees=3, scale=(0.97, 1.03)),
         ]),
-        'val': create_transforms(image_size)
-    }
+        val=create_transforms(image_size),
+    )

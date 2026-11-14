@@ -2,7 +2,9 @@ import torch
 from sklearn.metrics import accuracy_score
 from torch import nn
 
-def train_one_epoch(data_loader, model, loss_function, optimizer, device, scheduler=None):
+from ..type import TrainMetrics
+
+def train_one_epoch(data_loader, model, loss_function, optimizer, device, scheduler=None) -> TrainMetrics:
     model.train()
     model = model.to(device)
     freeze_bn_in_frozen_layers(model)
@@ -39,10 +41,7 @@ def train_one_epoch(data_loader, model, loss_function, optimizer, device, schedu
     average_loss = total_loss / n_seen
     accuracy = accuracy_score(all_labels, all_predictions)
 
-    return {
-        "loss": average_loss,
-        "accuracy": accuracy
-    }
+    return TrainMetrics(loss=average_loss, accuracy=accuracy)
 
 def freeze_bn_in_frozen_layers(model):
     for module in model.modules():

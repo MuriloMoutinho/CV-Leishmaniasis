@@ -1,19 +1,20 @@
+from dataclasses import replace
+
 import optuna
-import torch, time, numpy, copy
+import torch, time, numpy, copy, dataclasses
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import Subset, ConcatDataset
 
 from handler import create_binary_model, create_optimizer, create_loss_function, create_scheduler, create_augmentation
 from training_config import get_optimizer_param_groups, compute_pos_weight, create_dataloader
-from training import train_one_epoch, validate_model, set_seed, TrainingConfig, KFoldConfig
-
+from training import train_one_epoch, validate_model, set_seed, TrainingConfig, KFoldConfig, ValidationMetrics
 
 def train_validate_kfold(
     dataset,
     config: TrainingConfig,
     kfold_config: KFoldConfig,
     trial=None
-):
+) -> list[ValidationMetrics]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     labels, dataset_sources = get_dataset_labels_and_sources(dataset)
@@ -27,7 +28,6 @@ def train_validate_kfold(
     skf = StratifiedKFold(n_splits=kfold_config.n_splits, shuffle=True, random_state=kfold_config.val_split_seed)
 
     fold_results = []
-    fold_histories = []
 
     transformations = create_augmentation(config.augmentation_level, config.resolution)
 
@@ -52,7 +52,7 @@ def train_validate_kfold(
         scheduler = create_scheduler(config.scheduler_name, optimizer, len(train_loader), config.epochs) \
             if config.scheduler_name is not None else None
 
-        history, best_metrics_epoch = train_and_validate_fold(
+        best_metrics_epoch = train_and_validate_fold(
             model=fold_model,
             train_loader=train_loader,
             val_loader=val_loader,
@@ -67,17 +67,16 @@ def train_validate_kfold(
         )
 
         fold_results.append(best_metrics_epoch)
-        fold_histories.append(history)
 
         print(f"\nResultados Fold {fold}:" )
-        print(f"Resultados melhor época: {best_metrics_epoch['epoch']:.4f}")
-        print(f"Accuracy : {best_metrics_epoch['accuracy']:.4f}")
-        print(f"Precision: {best_metrics_epoch['precision']:.4f}")
-        print(f"Recall   : {best_metrics_epoch['recall']:.4f}")
-        print(f"F1       : {best_metrics_epoch['f1_class1']:.4f}")
-        print(f"Tempo fold: {best_metrics_epoch['time']:.2f}s")
+        print(f"Resultados melhor época: {best_metrics_epoch.epoch:.4f}")
+        print(f"Accuracy : {best_metrics_epoch.accuracy:.4f}")
+        print(f"Precision: {best_metrics_epoch.precision:.4f}")
+        print(f"Recall   : {best_metrics_epoch.recall:.4f}")
+        print(f"F1       : {best_metrics_epoch.f1_class1:.4f}")
+        print(f"Tempo fold: {best_metrics_epoch.time:.2f}s")
 
-    return fold_results, fold_histories
+    return fold_results
 
 from torch.utils.data import ConcatDataset
 import numpy
@@ -102,9 +101,9 @@ def create_data_loaders_kfold(dataset, transformations, config, train_idx, val_i
     train_dataset = copy.deepcopy(dataset)
     if isinstance(train_dataset, ConcatDataset):
         for ds in train_dataset.datasets:
-            ds.transform = transformations["train"]
+            ds.transform = transformations.train
     else:
-        train_dataset.transform = transformations["train"]
+        train_dataset.transform = transformations.train
 
     train_fold = Subset(train_dataset, train_idx)
     train_loader = create_dataloader(train_fold, config.batch_size, True)
@@ -112,9 +111,9 @@ def create_data_loaders_kfold(dataset, transformations, config, train_idx, val_i
     val_dataset = copy.deepcopy(dataset)
     if isinstance(val_dataset, ConcatDataset):
         for ds in val_dataset.datasets:
-            ds.transform = transformations["val"]
+            ds.transform = transformations.val
     else:
-        val_dataset.transform = transformations["val"]
+        val_dataset.transform = transformations.val
 
     val_fold = Subset(val_dataset, val_idx)
     val_loader = create_dataloader(val_fold, config.batch_size, False)
@@ -139,8 +138,6 @@ def train_and_validate_fold(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
-    history = []
-
     best_monitored_metric = -float("inf")
     best_metrics_epoch  = None
 
@@ -155,35 +152,12 @@ def train_and_validate_fold(
         train_metrics = train_one_epoch(train_loader, model, loss_function, optimizer, device, scheduler)
         val_metrics = validate_model(model, val_loader, loss_function, device)
 
-        history.append({
-            "epoch": epoch + 1,
-            "train_loss": train_metrics["loss"],
-            "train_accuracy": train_metrics["accuracy"],
-            "val_loss": val_metrics["loss"],
-            "val_accuracy": val_metrics["accuracy"],
-            "val_balanced_accuracy": val_metrics["balanced_accuracy"],
-            "val_mcc": val_metrics["mcc"],
-            "val_precision": val_metrics["precision"],
-            "val_recall": val_metrics["recall"],
-            "val_f1_class1": val_metrics["f1_class1"],
-            "val_f1_class0": val_metrics["f1_class0"],
-            "val_f1_macro": val_metrics["f1_macro"],
-            "val_roc_auc": val_metrics["roc_auc"],
-            "val_pr_auc_class1": val_metrics["pr_auc_class1"],
-            "val_pr_auc_class0": val_metrics["pr_auc_class0"],
-            "val_specificity": val_metrics["specificity"],
-            "val_tn": val_metrics["tn"],
-            "val_fp": val_metrics["fp"],
-            "val_fn": val_metrics["fn"],
-            "val_tp": val_metrics["tp"],
-        })
-
         print(
-            f"Train Loss: {train_metrics['loss']:.4f} | Train Acc: {train_metrics['accuracy']:.4f} | "
-            f"Val Loss: {val_metrics['loss']:.4f} | Val Acc: {val_metrics['accuracy']:.4f}"
+            f"Train Loss: {train_metrics.loss:.4f} | Train Acc: {train_metrics.accuracy:.4f} | "
+            f"Val Loss: {val_metrics.loss:.4f} | Val Acc: {val_metrics.accuracy:.4f}"
         )
 
-        current_monitored_metric = val_metrics[metric_to_monitor]
+        current_monitored_metric = val_metrics.get(metric_to_monitor)
 
         if trial is not None and enable_pruning:
             trial.report(float(current_monitored_metric), step=epoch)
@@ -198,8 +172,7 @@ def train_and_validate_fold(
             best_monitored_metric = current_monitored_metric
             epochs_without_improvement = 0
 
-            best_metrics_epoch = val_metrics.copy()
-            best_metrics_epoch['epoch'] = epoch + 1
+            best_metrics_epoch = replace(val_metrics, epoch=epoch + 1)
         else:
             epochs_without_improvement += 1
             if epochs_without_improvement >= patience_early_stopping:
@@ -209,6 +182,6 @@ def train_and_validate_fold(
         print(f"Tempo época: {end_epoch - start_epoch:.2f}s")
 
     end = time.time()
-    best_metrics_epoch['time'] = end - start
+    best_metrics_epoch.time = end - start
 
-    return history, best_metrics_epoch
+    return best_metrics_epoch
