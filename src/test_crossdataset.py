@@ -1,11 +1,13 @@
-from dataclasses import replace
+import hashlib
+import json
+from dataclasses import replace, asdict
 from pathlib import Path
 
 import gc
 import torch
 import torchvision
 
-from data import save_cross_dataset_result
+from data import save_cross_dataset_result, save_npz
 from training import train_validate_crossdataset, TrainingConfig
 
 DATASET_CROSS_ROOT = Path("../datasets-cross")
@@ -21,10 +23,14 @@ DATASETS = {
     "DLB+AIR": DATASET_CROSSTRAIN_ROOT / "DLB+AIR",
 }
 
+def config_tag(config: TrainingConfig, length: int = 8) -> str:
+    params = asdict(config)
+    params.pop("training_seed", None)
+    return hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest()[:length]
+
 def load_dataset(dataset_name: str):
     root = DATASETS[dataset_name]
     return torchvision.datasets.ImageFolder(root=str(root))
-
 
 default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
                                 batch_size=24, fine_tuning="last_block", resolution=(576, 432),
@@ -131,7 +137,7 @@ if __name__ == "__main__":
     for name_train_dataset, name_test_dataset, config in configs:
         train_dataset = load_dataset(name_train_dataset)
         test_dataset = load_dataset(name_test_dataset)
-        historys = []
+        history = []
 
         for seed in seeds:
             print(f"\n{'=' * 50}")
@@ -140,10 +146,8 @@ if __name__ == "__main__":
             print(f"\nTreinado em {name_train_dataset} | Testado em {name_test_dataset} | {config.model_name} | aug={config.augmentation_level} ")
 
             checkpoint_path = Path(
-                f"experiments/loso2/results/cross/models/{name_train_dataset}_{config.model_name}_{config.augmentation_level}_{seed}.pth")
-
-            #tag = hashlib.md5(json.dumps(asdict(config), sort_keys=True).encode()).hexdigest()[:8]
-            #checkpoint_path = Path(f".../{train}_{config.model_name}_{config.augmentation_level}_{tag}_{seed}.pth")
+                f"experiments/loso2/results/cross/models/"
+                f"{name_train_dataset}_{config.model_name}_{config.augmentation_level}_{config_tag(config)}_{seed}.pth")
 
             metrics = train_validate_crossdataset(
                 train_dataset,
@@ -151,15 +155,17 @@ if __name__ == "__main__":
                 replace(config, training_seed=seed),
                 checkpoint_path
             )
-            historys.append(metrics)
+            history.append(metrics)
 
             torch.cuda.empty_cache()
             gc.collect()
 
-        save_cross_dataset_result(
-            model_result=historys,
+        experiment_id = save_cross_dataset_result(
+            model_result=history,
             trained_on=name_train_dataset,
             tested_on=name_test_dataset,
-            config=replace(config, training_seed=None),  # resultado agrega várias seeds
+            config=config,
             filename="experiments/loso2/results/cross/cross_training.csv",
+            seeds=seeds,
         )
+        save_npz(history, f"experiments/loso2/results/cross/cross-training/{experiment_id}", file_prefix="model")

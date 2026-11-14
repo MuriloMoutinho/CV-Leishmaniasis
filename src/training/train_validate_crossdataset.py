@@ -35,7 +35,6 @@ def train_validate_crossdataset(
 
     return metrics
 
-
 def load_trained_model(config: TrainingConfig, path: Path | None, device):
     if path is None or not Path(path).is_file():
         return None

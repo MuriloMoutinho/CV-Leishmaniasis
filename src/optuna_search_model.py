@@ -6,7 +6,7 @@ from dataclasses import replace
 
 from torch.utils.data import ConcatDataset
 
-from data import save_kfold_result
+from data import save_kfold_result, save_npz
 from training import train_validate_kfold, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
@@ -112,13 +112,14 @@ def evaluate_config_on_dataset(config, dataset_name, model_name, trial):
         trial=trial
     )
 
-    save_kfold_result(
+    experiment_id = save_kfold_result(
         fold_results=fold_results,
         config=config,
         dataset_name=dataset_name,
         kfold_config=kfold_config,
-        filename=(f"{EXPERIMENTS_ROOT}/kfold/optuna_kfold_{model_name}_{dataset_name}.csv"),
+        filename=f"{EXPERIMENTS_ROOT}/kfold/optuna_kfold_{model_name}_{dataset_name}.csv",
     )
+    save_npz(fold_results, f"{EXPERIMENTS_ROOT}/kfold/labels-kfold/{model_name}_{dataset_name}/{experiment_id}", file_prefix="fold")
 
     df_folds = pd.DataFrame(fold_results)
     score = df_folds[kfold_config.metric_to_monitor].mean()

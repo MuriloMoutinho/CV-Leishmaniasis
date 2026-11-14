@@ -1,4 +1,4 @@
-import os, numpy
+import os
 from dataclasses import asdict
 from pathlib import Path
 
@@ -26,16 +26,6 @@ def _load_previous(filename):
     return pd.DataFrame(), 1
 
 
-def _save_arrays(results, experiment_dir: Path, file_prefix: str):
-    experiment_dir.mkdir(parents=True, exist_ok=True)
-    for n, res in enumerate(results, start=1):
-        numpy.savez(
-            experiment_dir / f"{file_prefix}{n}.npz",
-            labels=res["labels"],
-            probabilities=res["probabilities"],
-        )
-
-
 def _aggregate_metrics(df: pd.DataFrame) -> dict:
     metrics = {}
     for name in PERCENT_METRICS:
@@ -59,13 +49,10 @@ def _save_experiment(
     config: TrainingConfig,
     info: dict,
     filename: str,
-    labels_dir: str,
-    file_prefix: str,
     extra=None,
+    seeds: list[int] | None = None,
 ):
     df_old, experiment_id = _load_previous(filename)
-
-    _save_arrays(results, Path(filename).parent / labels_dir / str(experiment_id), file_prefix)
 
     df_runs = pd.DataFrame([
         {k: v for k, v in r.items() if k not in ARRAY_KEYS} for r in results
@@ -79,6 +66,8 @@ def _save_experiment(
         **asdict(config),
         **_aggregate_metrics(df_runs),
     }
+    if seeds is not None:
+        result["training_seed"] = ",".join(str(s) for s in seeds)
     if extra is not None:
         result.update(extra(df_runs))
 
@@ -88,7 +77,7 @@ def _save_experiment(
     df_result.to_csv(filename, index=False)
     print(f"\nExperimento {experiment_id} salvo")
 
-    return df_result
+    return experiment_id
 
 
 def save_kfold_result(
@@ -112,8 +101,6 @@ def save_kfold_result(
         fold_results, config,
         info={"dataset_name": dataset_name},
         filename=filename,
-        labels_dir="labels-kfold",
-        file_prefix="fold",
         extra=extra,
     )
 
@@ -122,14 +109,14 @@ def save_training_result(
     model_result,
     config: TrainingConfig,
     dataset_name: str,
-    filename="training.csv"
+    filename="training.csv",
+    seeds: list[int] | None = None
 ):
     return _save_experiment(
         model_result, config,
         info={"dataset_name": dataset_name},
         filename=filename,
-        labels_dir="labels-training",
-        file_prefix="model",
+        seeds=seeds,
     )
 
 
@@ -138,12 +125,12 @@ def save_cross_dataset_result(
     trained_on: str,
     tested_on: str,
     config: TrainingConfig,
-    filename="cross_dataset_results.csv"
+    filename="cross_dataset_results.csv",
+    seeds: list[int] | None = None
 ):
     return _save_experiment(
         model_result, config,
         info={"trained_on": trained_on, "tested_on": tested_on},
         filename=filename,
-        labels_dir="cross-training",
-        file_prefix="model",
+        seeds=seeds,
     )

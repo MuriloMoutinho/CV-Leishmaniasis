@@ -6,7 +6,7 @@ import torch.cuda
 import torchvision
 from torch.utils.data import ConcatDataset
 
-from data import save_kfold_result
+from data import save_kfold_result, save_npz
 from training import train_validate_kfold, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
@@ -131,11 +131,12 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
         gc.collect()
 
-        save_kfold_result(
+        experiment_id = save_kfold_result(
             fold_results=fold_results,
             config=config,
             dataset_name=dataset_name,
             kfold_config=kfold_config,
             filename="experiments/loso2/pre-results-loso/kfold/kfold.csv"
         )
+        save_npz(fold_results, f"experiments/loso2/pre-results-loso/kfold/labels-kfold/{experiment_id}", file_prefix="fold")
 

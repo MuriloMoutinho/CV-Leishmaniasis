@@ -3,7 +3,7 @@ from pathlib import Path
 import gc, torch, optuna, torchvision, torch.cuda, ast
 import pandas as pd
 from dataclasses import replace
-from data import save_kfold_result
+from data import save_kfold_result, save_npz
 from training import train_validate_kfold, KFoldConfig, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
@@ -85,13 +85,14 @@ def evaluate_config_on_datasets(config):
             kfold_config=kfold_config,
         )
 
-        save_kfold_result(
+        experiment_id = save_kfold_result(
             fold_results=fold_results,
             config=config,
             dataset_name=dataset_name,
             kfold_config=kfold_config,
             filename=f"{EXPERIMENTS_ROOT}/optuna_kfold.csv"
         )
+        save_npz(fold_results, f"{EXPERIMENTS_ROOT}/labels-kfold/{experiment_id}", file_prefix="fold")
 
         df_folds = pd.DataFrame(fold_results)
         dataset_scores[dataset_name] = df_folds[kfold_config.metric_to_monitor].mean()

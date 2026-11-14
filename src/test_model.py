@@ -4,7 +4,7 @@ from pathlib import Path
 
 import torchvision
 
-from data import save_training_result
+from data import save_training_result, save_npz
 from training import train_validate_model, TrainingConfig
 
 DATASET_ROOT = Path("../datasets-folds")
@@ -79,8 +79,10 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
             gc.collect()
 
-        save_training_result(
+        experiment_id = save_training_result(
             model_result=historys,
-            config=replace(config, training_seed=None),  # resultado agrega várias seeds
+            config=config,
             dataset_name=dataset_name,
-            filename=f'experiments/loso/results/intra/traning.csv')
+            filename="experiments/loso/results/intra/traning.csv",
+            seeds=seeds)
+        save_npz(historys, f"experiments/loso/results/intra/labels-training/{experiment_id}", file_prefix="model")
