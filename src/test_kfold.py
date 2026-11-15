@@ -3,47 +3,9 @@ from dataclasses import replace
 from pathlib import Path
 
 import torch.cuda
-import torchvision
-from torch.utils.data import ConcatDataset
 
-from data import save_kfold_result, save_npz
+from data import save_kfold_result, save_npz, load_dataset
 from training import train_validate_kfold, KFoldConfig, TrainingConfig
-
-DATASET_ROOT = Path("../datasets-folds")
-DATASET_CROSS_ROOT = Path("../datasets-cross")
-
-DATASETS = {
-    "CROSS_AIR_LEISH": DATASET_CROSS_ROOT / "AIR_LEISH",
-    "CROSS_DeepLeish": DATASET_CROSS_ROOT / "DeepLeish",
-    "CROSS_DLB": DATASET_CROSS_ROOT / "DLB",
-
-    "DLB+Deep": ["CROSS_DLB", "CROSS_DeepLeish"],
-    "AIR+Deep": ["CROSS_AIR_LEISH", "CROSS_DeepLeish"],
-    "DLB+AIR": ["CROSS_DLB", "CROSS_AIR_LEISH"],
-
-    "AIR_LEISH": DATASET_ROOT / "AIR_LEISH" / "train",
-    "DeepLeish": DATASET_ROOT / "DeepLeish" / "train",
-    "DLB": DATASET_ROOT / "DLB" / "train",
-}
-
-def load_dataset(name: str):
-    root = DATASETS[name]
-
-    if isinstance(root, list):
-        datasets = [
-            torchvision.datasets.ImageFolder(root=str(DATASETS[dataset_name]))
-            for dataset_name in root
-        ]
-
-        reference_classes = datasets[0].class_to_idx
-
-        for ds in datasets[1:]:
-            if ds.class_to_idx != reference_classes:
-                raise ValueError(f"Classes incompatíveis entre os datasets: {reference_classes} != {ds.class_to_idx}")
-
-        return ConcatDataset(datasets)
-
-    return torchvision.datasets.ImageFolder(root=str(root))
 
 kfold_config = KFoldConfig(
     n_splits=3,

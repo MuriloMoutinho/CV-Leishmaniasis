@@ -3,34 +3,13 @@ from pathlib import Path
 
 import gc
 import torch
-import torchvision
-from torch.utils.data import ConcatDataset
 
-from data import save_cross_dataset_result, save_npz, save_model, load_model, config_tag
+from data import save_cross_dataset_result, save_npz, save_model, load_model, config_tag, load_dataset
 from training import train_validate_crossdataset, TrainingConfig
-
-DATASET_CROSS_ROOT = Path("../datasets-cross")
-
-DATASETS = {
-    "CROSS_AIR_LEISH": DATASET_CROSS_ROOT / "AIR_LEISH",
-    "CROSS_DeepLeish": DATASET_CROSS_ROOT / "DeepLeish",
-    "CROSS_DLB": DATASET_CROSS_ROOT / "DLB",
-
-    "DLB+Deep": ["CROSS_DLB", "CROSS_DeepLeish"],
-    "AIR+Deep": ["CROSS_AIR_LEISH", "CROSS_DeepLeish"],
-    "DLB+AIR": ["CROSS_DLB", "CROSS_AIR_LEISH"],
-}
 
 def model_path(train_dataset_name: str, config: TrainingConfig, seed: int) -> str:
     return (f"experiments/loso/results/cross/models/"
             f"{train_dataset_name}_{config.model_name}_{config.augmentation_level}_{config_tag(config)}_{seed}.pth")
-
-def load_dataset(dataset: str):
-    root = DATASETS[dataset]
-
-    if isinstance(root, list):
-        return ConcatDataset([load_dataset(name) for name in root])
-    return torchvision.datasets.ImageFolder(root=str(root))
 
 default_config = TrainingConfig(loss_name="cross_entropy", optimizer_name="adamw", scheduler_name=None,
                                 batch_size=24, fine_tuning="last_block", resolution=(576, 432),
@@ -135,7 +114,7 @@ if __name__ == "__main__":
     seeds = [41, 42, 43, 44, 45]
 
     for name_train_dataset, name_test_dataset, config in configs:
-        train_dataset = load_dataset(name_train_dataset)
+        train_dataset = load_dataset(name_train_dataset, keep_sources=False)
         test_dataset = load_dataset(name_test_dataset)
         history = []
 

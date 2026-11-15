@@ -8,7 +8,7 @@ from pathlib import Path
 #DLB
 
 PASTA_ORIGEM = Path("../datasets-cross/DLB")
-PASTA_SAIDA = Path("../datasets-folds/DLB")
+PASTA_SAIDA = Path("../datasets/DLB")
 PCT_TREINO = 0.8
 SEED = 42
 MOVER = False

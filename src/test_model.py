@@ -2,24 +2,8 @@ import gc, torch
 from dataclasses import replace
 from pathlib import Path
 
-import torchvision
-
-from data import save_training_result, save_npz, save_model, load_model, config_tag
+from data import save_training_result, save_npz, save_model, load_model, config_tag, load_dataset, load_test_dataset
 from training import train_validate_model, TrainingConfig
-
-DATASET_ROOT = Path("../datasets-folds")
-
-DATASETS = {
-    "AIR_LEISH": DATASET_ROOT / "AIR_LEISH",
-    "DeepLeish": DATASET_ROOT / "DeepLeish",
-    "DLB": DATASET_ROOT / "DLB",
-}
-
-def load_datasets(name: str):
-    root = DATASETS[name]
-    train_dataset = torchvision.datasets.ImageFolder(root=str(root / "train"))
-    test_dataset = torchvision.datasets.ImageFolder(root=str(root / "test"))
-    return train_dataset, test_dataset
 
 def model_path(dataset_name: str, config: TrainingConfig, seed: int) -> str:
     return (f"experiments/loso/results/intra/models/"
@@ -65,7 +49,8 @@ if __name__ == "__main__":
     seeds = [41, 42, 43, 44, 45]
 
     for dataset_name, config in configs:
-        train_dataset, test_dataset = load_datasets(dataset_name)
+        train_dataset = load_dataset(dataset_name)
+        test_dataset = load_test_dataset(dataset_name)
         historys = []
 
         for seed in seeds:

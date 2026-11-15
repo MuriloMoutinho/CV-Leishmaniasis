@@ -5,10 +5,9 @@ __pycache__/
 
 
 .idea/
-datasets-cross/
-datasets-crosstrain/
-datasets-folds/
+datasets/
 src/experiments
+temp/
 
 # C extensions
 *.so

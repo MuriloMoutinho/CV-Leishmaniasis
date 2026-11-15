@@ -4,40 +4,14 @@ import gc, torch, optuna, torchvision, torch.cuda, ast
 import pandas as pd
 from dataclasses import replace
 
-from torch.utils.data import ConcatDataset
-
-from data import save_kfold_result, save_npz
+from data import save_kfold_result, save_npz, load_dataset, BASE_DATASETS
 from training import train_validate_kfold, KFoldConfig, TrainingConfig
-
-DATASET_ROOT = Path("../datasets-folds")
-DATASET_CROSS_ROOT = Path("../datasets-cross")
-
-DATASETS = {
-    "CROSS_AIR_LEISH": DATASET_CROSS_ROOT / "AIR_LEISH",
-    "CROSS_DeepLeish": DATASET_CROSS_ROOT / "DeepLeish",
-    "CROSS_DLB": DATASET_CROSS_ROOT / "DLB",
-
-    "DLB+Deep": ["CROSS_DLB", "CROSS_DeepLeish"],
-    "AIR+Deep": ["CROSS_AIR_LEISH", "CROSS_DeepLeish"],
-    "DLB+AIR": ["CROSS_DLB", "CROSS_AIR_LEISH"],
-
-    "AIR_LEISH": DATASET_ROOT / "AIR_LEISH" / "train",
-    "DeepLeish": DATASET_ROOT / "DeepLeish" / "train",
-    "DLB": DATASET_ROOT / "DLB" / "train",
-}
 
 N_TRIALS = 5
 BATCH_SIZE = 24
 RANDOM_SEED = 42
 
 EXPERIMENTS_ROOT = "experiments/optuna"
-
-def load_dataset(dataset: str):
-    root = DATASETS[dataset]
-
-    if isinstance(root, list):
-        return ConcatDataset([load_dataset(name) for name in root])
-    return torchvision.datasets.ImageFolder(root=str(root))
 
 kfold_config = KFoldConfig(
     n_splits=3,
@@ -91,7 +65,7 @@ def suggest_config(trial, model_name):
 def evaluate_config_on_datasets(config):
     dataset_scores = {}
 
-    for dataset_name in DATASETS.keys():
+    for dataset_name in BASE_DATASETS:
         dataset = load_dataset(dataset_name)
 
         fold_results = train_validate_kfold(
@@ -191,7 +165,7 @@ def run_optuna(model_name, trials):
         print(f"  {key}: {value}")
     print("=" * 70)
 
-    for dataset_name in DATASETS.keys():
+    for dataset_name in BASE_DATASETS:
         value = study.best_trial.user_attrs.get(f"{kfold_config.metric_to_monitor}_{dataset_name}")
         print(f"  {dataset_name}: {value:.4f}")
 
