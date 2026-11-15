@@ -7,7 +7,6 @@ __pycache__/
 .idea/
 datasets/
 src/experiments
-temp/
 
 # C extensions
 *.so

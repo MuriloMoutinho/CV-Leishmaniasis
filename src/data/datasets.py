@@ -4,7 +4,7 @@ from pathlib import Path
 from torch.utils.data import ConcatDataset
 from torchvision.datasets import ImageFolder
 
-FOLDS_ROOT = Path("../datasets-folds")
+FOLDS_ROOT = Path("../datasets")
 
 BASE_DATASETS = ("AIR_LEISH", "DeepLeish", "DLB")
 

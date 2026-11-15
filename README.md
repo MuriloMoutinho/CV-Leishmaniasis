@@ -52,7 +52,7 @@ Os scripts em [`utils/`] ajudam a montar essa estrutura a partir dos dados bruto
 
 ## Como rodar
 
-Os scripts usam caminhos relativos (`../datasets-*`, `experiments/...`), então **devem ser executados de dentro de `src/`**:
+Os scripts usam caminhos relativos (`../datasets`, `experiments/...`), então **devem ser executados de dentro de `src/`**:
 
 Cada script tem uma lista `configs` no topo, com as combinações de modelo, augmentation e hiperparâmetros a rodar.
 
